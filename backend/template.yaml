@@ -1,0 +1,254 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: MeetingMind - AI Meeting Intelligence Assistant
+
+Globals:
+  Function:
+    Timeout: 60
+    MemorySize: 256
+    Runtime: python3.11
+    Environment:
+      Variables:
+        MEETINGS_TABLE: !Ref MeetingsTable
+        AUDIO_BUCKET: !Ref AudioBucket
+        REGION: !Ref AWS::Region
+        SNS_TOPIC_ARN: !Ref ReminderTopic
+
+Parameters:
+  CognitoUserPoolId:
+    Type: String
+    Default: "PLACEHOLDER"
+  CognitoUserPoolClientId:
+    Type: String
+    Default: "PLACEHOLDER"
+
+Resources:
+
+  # ── COGNITO USER POOL ──────────────────────────────────────
+  MeetingMindUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: meetingmind-users
+      AutoVerifiedAttributes:
+        - email
+      UsernameAttributes:
+        - email
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireUppercase: false
+          RequireLowercase: false
+          RequireNumbers: false
+          RequireSymbols: false
+
+  MeetingMindUserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      UserPoolId: !Ref MeetingMindUserPool
+      ClientName: meetingmind-web-client
+      GenerateSecret: false
+      ExplicitAuthFlows:
+        - ALLOW_USER_PASSWORD_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+        - ALLOW_USER_SRP_AUTH
+
+  # ── S3 BUCKET FOR AUDIO FILES ──────────────────────────────
+  AudioBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "meetingmind-audio-${AWS::AccountId}"
+      CorsConfiguration:
+        CorsRules:
+          - AllowedOrigins: ["*"]
+            AllowedMethods: [GET, PUT, POST, HEAD]
+            AllowedHeaders: ["*"]
+            MaxAge: 3600
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteOldAudio
+            Status: Enabled
+            ExpirationInDays: 30
+
+  # ── DYNAMODB TABLE ─────────────────────────────────────────
+  MeetingsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: meetingmind-meetings
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: userId
+          AttributeType: S
+        - AttributeName: meetingId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: userId
+          KeyType: HASH
+        - AttributeName: meetingId
+          KeyType: RANGE
+
+  # ── SNS TOPIC FOR REMINDERS ────────────────────────────────
+  ReminderTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: meetingmind-reminders
+
+  # ── API GATEWAY ────────────────────────────────────────────
+  MeetingMindApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: prod
+      Cors:
+        AllowMethods: "'GET,POST,PUT,OPTIONS'"
+        AllowHeaders: "'Content-Type,Authorization'"
+        AllowOrigin: "'*'"
+      Auth:
+        DefaultAuthorizer: CognitoAuthorizer
+        Authorizers:
+          CognitoAuthorizer:
+            UserPoolArn: !GetAtt MeetingMindUserPool.Arn
+        AddDefaultAuthorizerToCorsPreflight: false
+
+  # ── LAMBDA: GET UPLOAD URL ─────────────────────────────────
+  GetUploadUrlFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: meetingmind-get-upload-url
+      CodeUri: functions/get-upload-url/
+      Handler: app.lambda_handler
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref AudioBucket
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref MeetingMindApi
+            Path: /upload-url
+            Method: POST
+
+  # ── LAMBDA: PROCESS MEETING (triggered by S3) ──────────────
+  ProcessMeetingFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: meetingmind-process-meeting
+      CodeUri: functions/process-meeting/
+      Handler: app.lambda_handler
+      Timeout: 900
+      MemorySize: 512
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref AudioBucket
+        - DynamoDBCrudPolicy:
+            TableName: !Ref MeetingsTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - transcribe:StartTranscriptionJob
+                - transcribe:GetTranscriptionJob
+              Resource: "*"
+            - Effect: Allow
+              Action:
+                - bedrock:InvokeModel
+              Resource: "*"
+      Events:
+        S3Upload:
+          Type: S3
+          Properties:
+            Bucket: !Ref AudioBucket
+            Events: s3:ObjectCreated:*
+            Filter:
+              S3Key:
+                Rules:
+                  - Name: prefix
+                    Value: "audio/"
+
+  # ── LAMBDA: LIST MEETINGS ──────────────────────────────────
+  ListMeetingsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: meetingmind-list-meetings
+      CodeUri: functions/list-meetings/
+      Handler: app.lambda_handler
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref MeetingsTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref MeetingMindApi
+            Path: /meetings
+            Method: GET
+
+  # ── LAMBDA: GET SINGLE MEETING ─────────────────────────────
+  GetMeetingFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: meetingmind-get-meeting
+      CodeUri: functions/get-meeting/
+      Handler: app.lambda_handler
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref MeetingsTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref MeetingMindApi
+            Path: /meetings/{meetingId}
+            Method: GET
+
+  # ── LAMBDA: UPDATE ACTION ITEM ─────────────────────────────
+  UpdateActionFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: meetingmind-update-action
+      CodeUri: functions/update-action/
+      Handler: app.lambda_handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref MeetingsTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref MeetingMindApi
+            Path: /meetings/{meetingId}/actions/{actionId}
+            Method: PUT
+
+  # ── LAMBDA: SEND REMINDERS (daily EventBridge) ─────────────
+  SendRemindersFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: meetingmind-send-reminders
+      CodeUri: functions/send-reminders/
+      Handler: app.lambda_handler
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref MeetingsTable
+        - SNSPublishMessagePolicy:
+            TopicName: !GetAtt ReminderTopic.TopicName
+      Events:
+        DailySchedule:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 8 * * ? *)
+            Description: Send daily action item reminders at 8 AM UTC
+
+# ── OUTPUTS (printed after deploy) ────────────────────────────
+Outputs:
+  ApiUrl:
+    Description: API Gateway URL
+    Value: !Sub "https://${MeetingMindApi}.execute-api.${AWS::Region}.amazonaws.com/prod"
+  AudioBucketName:
+    Description: S3 Bucket for audio files
+    Value: !Ref AudioBucket
+  UserPoolId:
+    Description: Cognito User Pool ID
+    Value: !Ref MeetingMindUserPool
+  UserPoolClientId:
+    Description: Cognito Client ID
+    Value: !Ref MeetingMindUserPoolClient
+  MeetingsTableName:
+    Description: DynamoDB Table
+    Value: !Ref MeetingsTable

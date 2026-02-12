@@ -1,0 +1,7 @@
+node_modules/
+.env
+.env.local
+__pycache__/
+.aws-sam/
+samconfig.toml
+*.zip
