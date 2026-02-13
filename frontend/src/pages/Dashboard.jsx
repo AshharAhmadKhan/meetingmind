@@ -2,44 +2,19 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { logout, checkSession } from '../utils/auth.js'
 import { listMeetings, getUploadUrl, uploadAudioToS3 } from '../utils/api.js'
-import { Mic, Upload, LogOut, Clock, CheckCircle,
-         AlertCircle, Loader, ChevronRight, FileAudio, Brain } from 'lucide-react'
 
-const STATUS_CONFIG = {
-  PENDING:      { label: 'Pending',      color: '#4a5f84', bg: 'rgba(74,95,132,0.12)' },
-  TRANSCRIBING: { label: 'Transcribing', color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
-  ANALYZING:    { label: 'Analyzing',    color: '#3b82f6', bg: 'rgba(59,130,246,0.12)' },
-  DONE:         { label: 'Done',         color: '#10b981', bg: 'rgba(16,185,129,0.12)' },
-  FAILED:       { label: 'Failed',       color: '#ef4444', bg: 'rgba(239,68,68,0.12)'  },
-}
-
-function StatusBadge({ status }) {
-  const cfg = STATUS_CONFIG[status] || STATUS_CONFIG.PENDING
-  return (
-    <span style={{
-      fontSize: 11, fontWeight: 600, letterSpacing: '0.4px',
-      padding: '3px 9px', borderRadius: 20,
-      color: cfg.color, background: cfg.bg,
-      textTransform: 'uppercase',
-    }}>
-      {cfg.label}
-    </span>
-  )
-}
-
-function StatusIcon({ status }) {
-  const props = { size: 14 }
-  if (status === 'DONE')         return <CheckCircle  {...props} color="#10b981" />
-  if (status === 'FAILED')       return <AlertCircle  {...props} color="#ef4444" />
-  if (status === 'TRANSCRIBING') return <Loader       {...props} color="#f59e0b" style={{animation:'spin 1s linear infinite'}} />
-  if (status === 'ANALYZING')    return <Brain        {...props} color="#3b82f6" />
-  return                                <Clock        {...props} color="#4a5f84" />
+const STATUS = {
+  PENDING:      { label: 'Pending',      color: '#8a8a74' },
+  TRANSCRIBING: { label: 'Transcribing', color: '#e8c06a' },
+  ANALYZING:    { label: 'Analyzing',    color: '#6a9ae8' },
+  DONE:         { label: 'Done',         color: '#c8f04a' },
+  FAILED:       { label: 'Failed',       color: '#e87a6a' },
 }
 
 export default function Dashboard() {
-  const navigate  = useNavigate()
-  const fileRef   = useRef()
-  const pollRef   = useRef()
+  const navigate = useNavigate()
+  const fileRef  = useRef()
+  const pollRef  = useRef()
 
   const [user,      setUser]      = useState('')
   const [meetings,  setMeetings]  = useState([])
@@ -49,6 +24,7 @@ export default function Dashboard() {
   const [uploadMsg, setUploadMsg] = useState('')
   const [title,     setTitle]     = useState('')
   const [error,     setError]     = useState('')
+  const [uploadPct, setUploadPct] = useState(0)
 
   useEffect(() => {
     checkSession().then(u => {
@@ -56,7 +32,6 @@ export default function Dashboard() {
       setUser(u.signInDetails?.loginId || '')
       fetchMeetings()
     })
-    // Poll every 8 seconds for status updates
     pollRef.current = setInterval(fetchMeetings, 8000)
     return () => clearInterval(pollRef.current)
   }, [])
@@ -65,313 +40,314 @@ export default function Dashboard() {
     try {
       const data = await listMeetings()
       setMeetings(data)
-    } catch (e) {
-      setError('Failed to load meetings')
-    } finally {
-      setLoading(false)
-    }
+    } catch { setError('Failed to load meetings') }
+    finally  { setLoading(false) }
   }
 
   async function handleFile(file) {
     if (!file) return
     const meetingTitle = title.trim() || file.name.replace(/\.[^/.]+$/, '')
-    setUploading(true)
-    setUploadMsg('Getting upload URL…')
-    setError('')
+    setUploading(true); setUploadPct(0)
+    setUploadMsg('Requesting upload slot…'); setError('')
     try {
-      const { meetingId, uploadUrl } = await getUploadUrl(
-        meetingTitle, file.type || 'audio/mpeg', file.size
-      )
-      setUploadMsg('Uploading audio…')
+      const { uploadUrl } = await getUploadUrl(meetingTitle, file.type || 'audio/mpeg', file.size)
+      setUploadMsg('Uploading audio…'); setUploadPct(40)
       await uploadAudioToS3(uploadUrl, file)
-      setUploadMsg('Upload complete! Processing started.')
+      setUploadPct(100); setUploadMsg('✓ Upload complete — AI processing started')
       setTitle('')
-      setTimeout(() => {
-        setUploadMsg('')
-        fetchMeetings()
-      }, 2500)
+      setTimeout(() => { setUploadMsg(''); setUploadPct(0); fetchMeetings() }, 3000)
     } catch (e) {
       setError(e.response?.data?.error || e.message || 'Upload failed')
-      setUploadMsg('')
-    } finally {
-      setUploading(false)
-    }
+      setUploadMsg(''); setUploadPct(0)
+    } finally { setUploading(false) }
   }
-
-  function onFileChange(e) { handleFile(e.target.files[0]) }
 
   function onDrop(e) {
     e.preventDefault(); setDragOver(false)
     handleFile(e.dataTransfer.files[0])
   }
 
-  async function handleLogout() {
-    await logout()
-    navigate('/login')
-  }
-
-  const hasPending = meetings.some(m =>
-    m.status === 'TRANSCRIBING' || m.status === 'ANALYZING' || m.status === 'PENDING'
-  )
+  const hasPending = meetings.some(m => ['TRANSCRIBING','ANALYZING','PENDING'].includes(m.status))
 
   return (
-    <div style={styles.root}>
-      {/* Topbar */}
-      <header style={styles.header}>
-        <div style={styles.headerLeft}>
-          <div style={styles.logoIcon}><Mic size={18} color="#3b82f6" /></div>
-          <span style={styles.logoText}>MeetingMind</span>
+    <div style={s.root}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Mono:wght@300;400&display=swap');
+        *{box-sizing:border-box;margin:0;padding:0;}
+        body{background:#0c0c09;}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes spin{to{transform:rotate(360deg)}}
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+        .mrow:hover{ background:#1a1a12 !important; border-color:#3a3a2a !important; }
+        .uzone:hover{ border-color:#c8f04a !important; }
+        input::placeholder{color:#6b7260;}
+        input:focus{outline:none; border-color:#c8f04a !important;}
+        input:-webkit-autofill{
+          -webkit-box-shadow:0 0 0 100px #1e1e16 inset !important;
+          -webkit-text-fill-color:#f0ece0 !important;
+        }
+      `}</style>
+
+      {/* HEADER */}
+      <header style={s.hdr}>
+        <div style={s.hdrL}>
+          <div style={s.logo}>
+            <span style={s.logoM}>M</span>
+            <span style={s.logoR}>eetingMind</span>
+          </div>
           {hasPending && (
-            <span style={styles.liveTag}>
-              <span style={styles.liveDot} />
+            <div style={s.pill}>
+              <span style={{...s.pillDot, animation:'pulse 1.5s infinite'}}/>
               Processing
-            </span>
+            </div>
           )}
         </div>
-        <div style={styles.headerRight}>
-          <span style={styles.userEmail}>{user}</span>
-          <button onClick={handleLogout} style={styles.logoutBtn} title="Sign out">
-            <LogOut size={16} />
-          </button>
+        <div style={s.hdrR}>
+          <span style={s.userTxt}>{user}</span>
+          <button onClick={async () => { await logout(); navigate('/login') }}
+            style={s.signOut}>↗ Sign out</button>
         </div>
       </header>
 
-      <main style={styles.main}>
-        <div style={styles.layout}>
+      {/* LAYOUT */}
+      <main style={s.main}>
 
-          {/* LEFT — Meeting list */}
-          <section style={styles.listPanel}>
-            <div style={styles.panelHeader}>
-              <h2 style={styles.panelTitle}>Your Meetings</h2>
-              <span style={styles.count}>{meetings.length}</span>
+        {/* LEFT — meetings */}
+        <section style={s.left}>
+          <div style={s.secHead}>
+            <div>
+              <h2 style={s.secTitle}>Your Meetings</h2>
+              <p style={s.secSub}>
+                {loading ? 'Loading…'
+                  : meetings.length === 0 ? 'No recordings yet'
+                  : `${meetings.length} recording${meetings.length !== 1 ? 's' : ''}`}
+              </p>
             </div>
+            {meetings.length > 0 &&
+              <span style={s.bigCount}>{meetings.length}</span>}
+          </div>
 
-            {error && (
-              <div style={styles.errorBox}>{error}</div>
-            )}
+          {error && <div style={s.errBox}>{error}</div>}
 
-            {loading ? (
-              <div style={styles.emptyState}>
-                <Loader size={24} color="#3b82f6" style={{animation:'spin 1s linear infinite'}} />
-                <p style={{color:'#4a5f84', marginTop: 12}}>Loading meetings…</p>
-              </div>
-            ) : meetings.length === 0 ? (
-              <div style={styles.emptyState}>
-                <FileAudio size={40} color="#1e2f50" />
-                <p style={{color:'#4a5f84', marginTop: 12, textAlign:'center'}}>
-                  No meetings yet.<br />Upload your first recording →
-                </p>
-              </div>
-            ) : (
-              <ul style={styles.list}>
-                {meetings.map(m => (
-                  <li key={m.meetingId}
-                    onClick={() => m.status === 'DONE' && navigate(`/meeting/${m.meetingId}`)}
-                    style={{
-                      ...styles.listItem,
-                      cursor: m.status === 'DONE' ? 'pointer' : 'default',
+          {loading ? (
+            <div style={s.center}>
+              <div style={{...s.spin, animation:'spin 1s linear infinite'}}/>
+              <p style={s.centerTxt}>Loading meetings…</p>
+            </div>
+          ) : meetings.length === 0 ? (
+            <div style={s.empty}>
+              <div style={s.emptyRing}>◎</div>
+              <p style={s.emptyH}>No meetings yet</p>
+              <p style={s.emptyP}>Upload your first recording →</p>
+            </div>
+          ) : (
+            <ul style={s.list}>
+              {meetings.map((m, i) => {
+                const cfg = STATUS[m.status] || STATUS.PENDING
+                const done = m.status === 'DONE'
+                return (
+                  <li key={m.meetingId} className="mrow"
+                    onClick={() => done && navigate(`/meeting/${m.meetingId}`)}
+                    style={{...s.row, cursor: done ? 'pointer' : 'default',
                       opacity: m.status === 'FAILED' ? 0.5 : 1,
-                    }}
-                    onMouseEnter={e => {
-                      if (m.status === 'DONE') e.currentTarget.style.background = '#162340'
-                      if (m.status === 'DONE') e.currentTarget.style.borderColor = '#243660'
-                    }}
-                    onMouseLeave={e => {
-                      e.currentTarget.style.background = '#111e35'
-                      e.currentTarget.style.borderColor = '#1e2f50'
-                    }}
-                  >
-                    <div style={styles.listItemTop}>
-                      <div style={styles.listItemLeft}>
-                        <StatusIcon status={m.status} />
-                        <span style={styles.meetingTitle}>{m.title}</span>
-                      </div>
-                      {m.status === 'DONE' && <ChevronRight size={14} color="#4a5f84" />}
+                      animationDelay:`${i*0.04}s`}}>
+                    <div style={s.rowTop}>
+                      <span style={s.rowTitle}>{m.title}</span>
+                      {done && <span style={s.rowArr}>→</span>}
                     </div>
-                    <div style={styles.listItemBottom}>
-                      <StatusBadge status={m.status} />
-                      <span style={styles.dateText}>
-                        {new Date(m.createdAt).toLocaleDateString('en-US',
-                          {month:'short', day:'numeric', year:'numeric'})}
+                    <div style={s.rowBot}>
+                      <span style={{...s.rowStatus, color: cfg.color}}>
+                        ● {cfg.label}
+                      </span>
+                      <span style={s.rowDate}>
+                        {new Date(m.createdAt).toLocaleDateString('en-GB',
+                          {day:'numeric', month:'short', year:'numeric'})}
                       </span>
                     </div>
                     {m.summary && (
-                      <p style={styles.summaryPreview}>
-                        {m.summary.slice(0, 100)}…
-                      </p>
+                      <p style={s.rowSumm}>{m.summary.slice(0,90)}…</p>
+                    )}
+                    {['TRANSCRIBING','ANALYZING'].includes(m.status) && (
+                      <div style={s.progTrack}>
+                        <div style={{...s.progFill,
+                          width: m.status === 'TRANSCRIBING' ? '45%' : '80%'}}/>
+                      </div>
                     )}
                   </li>
-                ))}
-              </ul>
-            )}
-          </section>
+                )
+              })}
+            </ul>
+          )}
+        </section>
 
-          {/* RIGHT — Upload panel */}
-          <section style={styles.uploadPanel}>
-            <div style={styles.panelHeader}>
-              <h2 style={styles.panelTitle}>New Meeting</h2>
+        {/* RIGHT — upload */}
+        <section style={s.right}>
+          <div style={s.secHead}>
+            <div>
+              <h2 style={s.secTitle}>New Recording</h2>
+              <p style={s.secSub}>Upload audio to start AI analysis</p>
             </div>
+          </div>
 
-            {/* Title input */}
-            <div style={styles.field}>
-              <label style={styles.label}>Meeting Title</label>
-              <input
-                type="text"
-                value={title}
-                onChange={e => setTitle(e.target.value)}
-                placeholder="e.g. Q1 Planning Session"
-                style={styles.input}
-                onFocus={e => e.target.style.borderColor = '#3b82f6'}
-                onBlur={e  => e.target.style.borderColor = '#1e2f50'}
-              />
-            </div>
+          <div style={s.fGroup}>
+            <label style={s.lbl}>MEETING TITLE</label>
+            <input type="text" value={title}
+              onChange={e => setTitle(e.target.value)}
+              placeholder="e.g. Q1 Planning Session"
+              style={s.inp}/>
+          </div>
 
-            {/* Drop zone */}
-            <div
-              style={{
-                ...styles.dropZone,
-                ...(dragOver ? styles.dropZoneActive : {}),
-                ...(uploading ? {opacity: 0.6, pointerEvents: 'none'} : {}),
-              }}
-              onClick={() => !uploading && fileRef.current?.click()}
-              onDragOver={e => { e.preventDefault(); setDragOver(true) }}
-              onDragLeave={() => setDragOver(false)}
-              onDrop={onDrop}
-            >
-              <input
-                ref={fileRef} type="file"
-                accept="audio/*,video/mp4"
-                onChange={onFileChange}
-                style={{display:'none'}}
-              />
-
-              {uploading ? (
-                <>
-                  <Loader size={36} color="#3b82f6"
-                    style={{animation:'spin 1s linear infinite', marginBottom: 16}} />
-                  <p style={styles.dropText}>{uploadMsg}</p>
-                </>
-              ) : (
-                <>
-                  <div style={styles.uploadIconWrap}>
-                    <Upload size={28} color="#3b82f6" />
+          <div className="uzone"
+            onClick={() => !uploading && fileRef.current?.click()}
+            onDragOver={e => { e.preventDefault(); setDragOver(true) }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={onDrop}
+            style={{...s.zone,
+              ...(dragOver ? {borderColor:'#c8f04a', background:'#161609'} : {}),
+              ...(uploading ? {opacity:0.5, pointerEvents:'none'} : {})}}>
+            <input ref={fileRef} type="file" accept="audio/*,video/mp4"
+              onChange={e => handleFile(e.target.files[0])}
+              style={{display:'none'}}/>
+            {uploading ? (
+              <>
+                <div style={{...s.spin, animation:'spin 1s linear infinite', marginBottom:14}}/>
+                <p style={s.zoneTitle}>{uploadMsg}</p>
+                {uploadPct > 0 && (
+                  <div style={s.upTrack}>
+                    <div style={{...s.upFill, width:`${uploadPct}%`}}/>
                   </div>
-                  <p style={styles.dropText}>
-                    Drop audio file here<br />
-                    <span style={styles.dropSub}>or click to browse</span>
-                  </p>
-                  <p style={styles.dropFormats}>MP3 · MP4 · WAV · M4A · WEBM · max 500MB</p>
-                </>
-              )}
-            </div>
-
-            {uploadMsg && !uploading && (
-              <div style={styles.successBox}>{uploadMsg}</div>
+                )}
+              </>
+            ) : (
+              <>
+                <div style={s.upArrow}>↑</div>
+                <p style={s.zoneTitle}>Drop audio file here</p>
+                <p style={s.zoneSub}>or click to browse</p>
+                <p style={s.zoneFmt}>MP3 · MP4 · WAV · M4A · WEBM · max 500MB</p>
+              </>
             )}
+          </div>
 
-            {/* Info cards */}
-            <div style={styles.infoCards}>
-              {[
-                { icon: <Mic size={16} color="#3b82f6"/>,         title: 'Transcribed',    sub: 'Speaker-labeled text' },
-                { icon: <Brain size={16} color="#10b981"/>,        title: 'AI Analyzed',    sub: 'Decisions extracted'  },
-                { icon: <CheckCircle size={16} color="#f59e0b"/>,  title: 'Action Tracked', sub: 'With deadline reminders' },
-              ].map(c => (
-                <div key={c.title} style={styles.infoCard}>
-                  {c.icon}
-                  <div>
-                    <p style={styles.infoCardTitle}>{c.title}</p>
-                    <p style={styles.infoCardSub}>{c.sub}</p>
-                  </div>
+          {uploadMsg && !uploading && (
+            <div style={s.okBox}>{uploadMsg}</div>
+          )}
+
+          <div style={s.pipeline}>
+            <p style={s.pipeLbl}>WHAT HAPPENS NEXT</p>
+            {[
+              {n:'01', t:'Transcribe', d:'Speaker-labeled text via AWS Transcribe'},
+              {n:'02', t:'Analyze',    d:'Decisions + action items via Bedrock Claude'},
+              {n:'03', t:'Notify',     d:'Email reminders for approaching deadlines'},
+            ].map(step => (
+              <div key={step.n} style={s.pipeStep}>
+                <span style={s.pipeN}>{step.n}</span>
+                <div>
+                  <p style={s.pipeT}>{step.t}</p>
+                  <p style={s.pipeD}>{step.d}</p>
                 </div>
-              ))}
-            </div>
-          </section>
-
-        </div>
+              </div>
+            ))}
+          </div>
+        </section>
       </main>
-
-      <style>{`
-        @keyframes spin { to { transform: rotate(360deg); } }
-      `}</style>
     </div>
   )
 }
 
-const styles = {
-  root:       { minHeight: '100vh', background: '#070d1a', display: 'flex', flexDirection: 'column' },
-  header:     { background: '#0d1629', borderBottom: '1px solid #1e2f50',
-                padding: '0 32px', height: 60, display: 'flex',
-                alignItems: 'center', justifyContent: 'space-between',
-                position: 'sticky', top: 0, zIndex: 100 },
-  headerLeft: { display: 'flex', alignItems: 'center', gap: 12 },
-  logoIcon:   { width: 34, height: 34, background: 'rgba(59,130,246,0.12)',
-                border: '1px solid rgba(59,130,246,0.25)', borderRadius: 8,
-                display: 'flex', alignItems: 'center', justifyContent: 'center' },
-  logoText:   { fontFamily: 'Syne, sans-serif', fontSize: 17, fontWeight: 700, color: '#f0f4ff' },
-  liveTag:    { display: 'flex', alignItems: 'center', gap: 6,
-                background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.2)',
-                borderRadius: 20, padding: '3px 10px', fontSize: 11,
-                color: '#3b82f6', fontWeight: 600, letterSpacing: '0.3px' },
-  liveDot:    { width: 6, height: 6, borderRadius: '50%', background: '#3b82f6',
-                animation: 'pulse 1.5s infinite' },
-  headerRight:{ display: 'flex', alignItems: 'center', gap: 12 },
-  userEmail:  { fontSize: 13, color: '#4a5f84' },
-  logoutBtn:  { background: 'none', border: 'none', color: '#4a5f84',
-                cursor: 'pointer', padding: 6, borderRadius: 6,
-                display: 'flex', alignItems: 'center' },
-  main:       { flex: 1, padding: '32px', maxWidth: 1200, margin: '0 auto', width: '100%' },
-  layout:     { display: 'grid', gridTemplateColumns: '1fr 420px', gap: 24, alignItems: 'start' },
-  listPanel:  { background: '#0d1629', border: '1px solid #1e2f50',
-                borderRadius: 16, overflow: 'hidden' },
-  uploadPanel:{ background: '#0d1629', border: '1px solid #1e2f50',
-                borderRadius: 16, padding: 24, position: 'sticky', top: 80 },
-  panelHeader:{ padding: '20px 24px 16px', borderBottom: '1px solid #1e2f50',
-                display: 'flex', alignItems: 'center', gap: 10 },
-  panelTitle: { fontFamily: 'Syne, sans-serif', fontSize: 16, fontWeight: 700, color: '#f0f4ff' },
-  count:      { background: '#111e35', border: '1px solid #1e2f50',
-                borderRadius: 20, padding: '1px 8px',
-                fontSize: 12, color: '#4a5f84', fontWeight: 600 },
-  emptyState: { display: 'flex', flexDirection: 'column', alignItems: 'center',
-                justifyContent: 'center', padding: '60px 24px' },
-  list:       { listStyle: 'none', padding: '12px' },
-  listItem:   { background: '#111e35', border: '1px solid #1e2f50',
-                borderRadius: 10, padding: '14px 16px', marginBottom: 8,
-                transition: 'background 0.18s, border-color 0.18s' },
-  listItemTop:    { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
-  listItemLeft:   { display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 },
-  listItemBottom: { display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
-  meetingTitle:   { fontSize: 14, fontWeight: 500, color: '#f0f4ff',
-                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 300 },
-  dateText:       { fontSize: 12, color: '#4a5f84' },
-  summaryPreview: { fontSize: 12, color: '#8da0c4', marginTop: 8,
-                    lineHeight: 1.5, borderTop: '1px solid #1e2f50', paddingTop: 8 },
-  field:      { marginBottom: 16 },
-  label:      { display: 'block', fontSize: 13, fontWeight: 500,
-                color: '#8da0c4', marginBottom: 6 },
-  input:      { width: '100%', background: '#111e35', border: '1px solid #1e2f50',
-                borderRadius: 8, padding: '10px 12px', color: '#f0f4ff',
-                fontSize: 14, outline: 'none', transition: 'border-color 0.18s',
-                fontFamily: 'DM Sans, sans-serif' },
-  dropZone:   { border: '2px dashed #1e2f50', borderRadius: 12,
-                padding: '40px 24px', textAlign: 'center',
-                cursor: 'pointer', transition: 'all 0.18s', marginBottom: 16 },
-  dropZoneActive: { borderColor: '#3b82f6', background: 'rgba(59,130,246,0.05)' },
-  uploadIconWrap: { width: 60, height: 60, background: 'rgba(59,130,246,0.1)',
-                    border: '1px solid rgba(59,130,246,0.2)', borderRadius: 12,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    margin: '0 auto 16px' },
-  dropText:   { fontSize: 14, color: '#f0f4ff', marginBottom: 6, lineHeight: 1.6 },
-  dropSub:    { color: '#4a5f84' },
-  dropFormats:{ fontSize: 11, color: '#4a5f84', letterSpacing: '0.3px' },
-  successBox: { background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)',
-                borderRadius: 8, padding: '10px 14px', color: '#6ee7b7',
-                fontSize: 13, marginBottom: 16 },
-  errorBox:   { background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)',
-                borderRadius: 8, padding: '10px 14px', color: '#fca5a5',
-                fontSize: 13, margin: '0 12px 8px' },
-  infoCards:  { display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 },
-  infoCard:   { background: '#111e35', border: '1px solid #1e2f50', borderRadius: 8,
-                padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10 },
-  infoCardTitle: { fontSize: 13, fontWeight: 500, color: '#f0f4ff', marginBottom: 1 },
-  infoCardSub:   { fontSize: 11, color: '#4a5f84' },
+const s = {
+  root: {minHeight:'100vh', background:'#0c0c09', fontFamily:"'DM Mono',monospace", color:'#f0ece0'},
+
+  hdr:  {background:'#0f0f0c', borderBottom:'1px solid #2a2a20', padding:'0 36px',
+         height:54, display:'flex', alignItems:'center', justifyContent:'space-between',
+         position:'sticky', top:0, zIndex:100},
+  hdrL: {display:'flex', alignItems:'center', gap:16},
+  logo: {display:'flex', alignItems:'baseline', gap:1},
+  logoM:{fontFamily:"'Playfair Display',serif", fontSize:20, fontWeight:900, color:'#c8f04a'},
+  logoR:{fontFamily:"'Playfair Display',serif", fontSize:17, fontWeight:700, color:'#f0ece0'},
+  pill: {display:'flex', alignItems:'center', gap:6, background:'#181809',
+         border:'1px solid #3a3a18', borderRadius:20, padding:'3px 10px',
+         fontSize:10, letterSpacing:'0.1em', color:'#c8f04a'},
+  pillDot:{width:5, height:5, borderRadius:'50%', background:'#c8f04a', flexShrink:0},
+  hdrR: {display:'flex', alignItems:'center', gap:14},
+  userTxt:{fontSize:11, letterSpacing:'0.06em', color:'#8a8a74'},
+  signOut:{background:'none', border:'1px solid #3a3a2e', borderRadius:3,
+           padding:'5px 12px', color:'#8a8a74', fontSize:10, letterSpacing:'0.1em',
+           cursor:'pointer', fontFamily:"'DM Mono',monospace",
+           transition:'color 0.15s, border-color 0.15s'},
+
+  main: {display:'grid', gridTemplateColumns:'1fr 400px',
+         minHeight:'calc(100vh - 54px)'},
+
+  left: {borderRight:'1px solid #2a2a20', padding:'32px 36px',
+         animation:'fadeUp 0.4s ease both'},
+  right:{background:'#0f0f0c', padding:'32px 36px',
+         animation:'fadeUp 0.4s ease 0.08s both'},
+
+  secHead:{display:'flex', justifyContent:'space-between', alignItems:'flex-start',
+           marginBottom:24, paddingBottom:18, borderBottom:'1px solid #2a2a20'},
+  secTitle:{fontFamily:"'Playfair Display',serif", fontSize:22, fontWeight:700,
+            color:'#f0ece0', letterSpacing:'-0.3px', marginBottom:4},
+  secSub:  {fontSize:10, letterSpacing:'0.1em', color:'#6b7260', textTransform:'uppercase'},
+  bigCount:{fontFamily:"'Playfair Display',serif", fontSize:32, fontWeight:900, color:'#c8f04a'},
+
+  errBox:{background:'#1a0e0e', border:'1px solid #4a2a2a', borderRadius:4,
+          padding:'10px 12px', color:'#e87a6a', fontSize:11, marginBottom:16},
+
+  center:{display:'flex', flexDirection:'column', alignItems:'center',
+          justifyContent:'center', padding:'80px 0', gap:14},
+  centerTxt:{fontSize:11, color:'#6b7260', letterSpacing:'0.1em'},
+  spin:  {width:20, height:20, border:'2px solid #2a2a20',
+          borderTopColor:'#c8f04a', borderRadius:'50%'},
+
+  empty:{display:'flex', flexDirection:'column', alignItems:'center',
+         justifyContent:'center', padding:'80px 0', gap:10},
+  emptyRing:{fontSize:48, color:'#3a3a2e', marginBottom:4},
+  emptyH:   {fontSize:15, color:'#8a8a74', letterSpacing:'-0.2px'},
+  emptyP:   {fontSize:11, color:'#6b7260', letterSpacing:'0.05em'},
+
+  list: {listStyle:'none', display:'flex', flexDirection:'column', gap:8},
+  row:  {background:'#141410', border:'1px solid #2a2a20', borderRadius:6,
+         padding:'14px 16px', transition:'background 0.15s, border-color 0.15s',
+         animation:'fadeUp 0.35s ease both'},
+  rowTop:   {display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8},
+  rowTitle: {fontSize:13, color:'#e8e4d0', letterSpacing:'0.01em'},
+  rowArr:   {fontSize:12, color:'#8a8a74'},
+  rowBot:   {display:'flex', justifyContent:'space-between', alignItems:'center'},
+  rowStatus:{fontSize:10, letterSpacing:'0.07em'},
+  rowDate:  {fontSize:10, color:'#555548', letterSpacing:'0.05em'},
+  rowSumm:  {fontSize:11, color:'#6b7260', marginTop:8, lineHeight:1.55,
+             borderTop:'1px solid #2a2a20', paddingTop:8},
+  progTrack:{height:2, background:'#2a2a20', borderRadius:1, marginTop:10},
+  progFill: {height:'100%', background:'#c8f04a', borderRadius:1, transition:'width 1s ease'},
+
+  fGroup:{marginBottom:18},
+  lbl:  {display:'block', fontSize:9, letterSpacing:'0.15em', color:'#8a8a74',
+         textTransform:'uppercase', marginBottom:8},
+  inp:  {width:'100%', background:'#1e1e16', border:'1px solid #3a3a2e',
+         borderRadius:4, padding:'10px 12px', color:'#f0ece0',
+         fontSize:13, fontFamily:"'DM Mono',monospace", caretColor:'#c8f04a',
+         outline:'none', transition:'border-color 0.2s'},
+
+  zone: {border:'1px dashed #3a3a2e', borderRadius:6, padding:'32px 20px',
+         textAlign:'center', cursor:'pointer', transition:'border-color 0.2s',
+         marginBottom:14, background:'#111108'},
+  upArrow: {fontSize:26, color:'#c8f04a', marginBottom:12, lineHeight:1},
+  zoneTitle:{fontSize:13, color:'#e8e4d0', marginBottom:4},
+  zoneSub:  {fontSize:11, color:'#8a8a74', marginBottom:8},
+  zoneFmt:  {fontSize:9, color:'#555548', letterSpacing:'0.1em', textTransform:'uppercase'},
+  upTrack:  {height:2, background:'#2a2a20', borderRadius:1,
+             marginTop:12, width:'80%', margin:'12px auto 0'},
+  upFill:   {height:'100%', background:'#c8f04a', borderRadius:1, transition:'width 0.3s'},
+  okBox:    {background:'#141a09', border:'1px solid #3a4a18', borderRadius:4,
+             padding:'10px 12px', color:'#c8f04a', fontSize:11,
+             letterSpacing:'0.04em', marginBottom:14},
+
+  pipeline:{marginTop:8, paddingTop:18, borderTop:'1px solid #2a2a20'},
+  pipeLbl: {fontSize:9, letterSpacing:'0.15em', color:'#555548',
+            textTransform:'uppercase', marginBottom:16},
+  pipeStep:{display:'flex', gap:14, alignItems:'flex-start', marginBottom:14},
+  pipeN:   {fontFamily:"'Playfair Display',serif", fontSize:18, fontWeight:700,
+            color:'#3a3a2e', lineHeight:1, flexShrink:0, marginTop:1},
+  pipeT:   {fontSize:12, color:'#a8a890', marginBottom:3, letterSpacing:'0.02em'},
+  pipeD:   {fontSize:10, color:'#6b7260', letterSpacing:'0.03em', lineHeight:1.5},
 }
