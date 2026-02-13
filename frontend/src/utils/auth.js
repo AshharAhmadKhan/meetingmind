@@ -1,37 +1,36 @@
 import { Amplify } from 'aws-amplify'
 import { signIn, signOut, getCurrentUser, fetchAuthSession } from 'aws-amplify/auth'
 
-// Config is injected at deploy time via env variables
-// For local dev, we read from window.__MM_CONFIG__ set by config.js
-const cfg = window.__MM_CONFIG__ || {}
+const cfg = (typeof window !== 'undefined' && window.__MM_CONFIG__) || {}
+const userPoolId       = cfg.userPoolId       || import.meta.env.VITE_USER_POOL_ID       || 'ap-south-1_PLACEHOLDER'
+const userPoolClientId = cfg.userPoolClientId || import.meta.env.VITE_USER_POOL_CLIENT_ID || 'PLACEHOLDERclientid'
 
-Amplify.configure({
-  Auth: {
-    Cognito: {
-      userPoolId:       cfg.userPoolId       || import.meta.env.VITE_USER_POOL_ID       || '',
-      userPoolClientId: cfg.userPoolClientId || import.meta.env.VITE_USER_POOL_CLIENT_ID || '',
+// Only configure Amplify if we have real values
+if (!userPoolId.includes('PLACEHOLDER')) {
+  Amplify.configure({
+    Auth: {
+      Cognito: { userPoolId, userPoolClientId }
     }
-  }
-})
+  })
+}
 
 export async function login(email, password) {
-  const result = await signIn({ username: email, password })
-  return result
+  return await signIn({ username: email, password })
 }
 
 export async function logout() {
-  await signOut()
+  try { await signOut() } catch(e) {}
   localStorage.removeItem('mm_user')
 }
 
 export async function getToken() {
-  const session = await fetchAuthSession()
-  return session.tokens?.idToken?.toString() || ''
+  try {
+    const session = await fetchAuthSession()
+    return session.tokens?.idToken?.toString() || ''
+  } catch { return '' }
 }
 
 export function getUser() {
-  // Simple check — if token fetch works we're logged in
-  // We cache email in localStorage for display only
   return localStorage.getItem('mm_user') || null
 }
 
