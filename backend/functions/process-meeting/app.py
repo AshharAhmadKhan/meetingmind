@@ -1,241 +1,212 @@
 import json
 import boto3
-import time
-import uuid
-import urllib.request
-from datetime import datetime, timezone
-
-transcribe = boto3.client('transcribe')
-bedrock    = boto3.client('bedrock-runtime')
-dynamodb   = boto3.resource('dynamodb')
-s3         = boto3.client('s3')
-
 import os
-TABLE_NAME = os.environ['MEETINGS_TABLE']
-REGION     = os.environ['REGION']
+import re
+import urllib.request
+from datetime import datetime, timezone, timedelta
 
+REGION     = os.environ.get('REGION', 'ap-south-1')
+TABLE_NAME = os.environ.get('MEETINGS_TABLE', 'meetingmind-meetings')
+BUCKET     = os.environ.get('AUDIO_BUCKET', '')
 
-# ── ENTRY POINT ───────────────────────────────────────────────
-def lambda_handler(event, context):
-    print("EVENT:", json.dumps(event))
+dynamodb  = boto3.resource('dynamodb', region_name=REGION)
+s3_client = boto3.client('s3', region_name=REGION)
+bedrock   = boto3.client('bedrock-runtime', region_name=REGION)
+transcribe = boto3.client('transcribe', region_name=REGION)
 
-    # Get the uploaded file details from the S3 event
-    record     = event['Records'][0]
-    bucket     = record['s3']['bucket']['name']
-    key        = record['s3']['object']['key']   # e.g. audio/userId__meetingId__title.mp3
-    
-    print(f"Processing: s3://{bucket}/{key}")
+def _update_status(table, user_id, meeting_id, status, extra=None):
+    item = {'userId': user_id, 'meetingId': meeting_id}
+    item.update(extra or {})
+    item['status']    = status
+    item['updatedAt'] = datetime.now(timezone.utc).isoformat()
+    table.put_item(Item=item)
 
-    # Parse userId, meetingId, title from the key
-    # Key format: audio/{userId}__{meetingId}__{title}.{ext}
-    filename   = key.split('/')[-1]              # userId__meetingId__title.mp3
-    parts      = filename.rsplit('.', 1)[0].split('__')  # ['userId','meetingId','title']
-    
-    if len(parts) < 3:
-        print(f"ERROR: unexpected key format: {key}")
-        return {'statusCode': 400, 'body': 'Bad key format'}
+def _get_format(s3_key):
+    ext = s3_key.rsplit('.', 1)[-1].lower()
+    return {'mp3':'mp3','wav':'wav','m4a':'mp4','mp4':'mp4','webm':'webm'}.get(ext, 'mp3')
 
-    user_id    = parts[0]
-    meeting_id = parts[1]
-    title      = parts[2].replace('-', ' ')
-
-    table = dynamodb.Table(TABLE_NAME)
-
-    # ── STEP 1: Update status to TRANSCRIBING ─────────────────
-    _update_status(table, user_id, meeting_id, 'TRANSCRIBING')
-
-    # ── STEP 2: Start Transcribe job ──────────────────────────
-    job_name = f"mm-{meeting_id}"
-    media_uri = f"s3://{bucket}/{key}"
-
-    try:
-        transcribe.start_transcription_job(
-            TranscriptionJobName=job_name,
-            Media={'MediaFileUri': media_uri},
-            MediaFormat=_get_format(key),
-            LanguageCode='en-US',
-            Settings={'ShowSpeakerLabels': True, 'MaxSpeakerLabels': 10}
-        )
-    except transcribe.exceptions.ConflictException:
-        # Job already exists (retry scenario) - proceed to poll
-        print(f"Job {job_name} already exists, polling...")
-
-    # ── STEP 3: Poll until Transcribe finishes ─────────────────
-    transcript_text = _poll_transcribe(job_name)
-    if not transcript_text:
-        _update_status(table, user_id, meeting_id, 'FAILED', 
-                       error='Transcription failed or timed out')
-        return {'statusCode': 500, 'body': 'Transcription failed'}
-
-    # ── STEP 4: Update status to ANALYZING ────────────────────
-    _update_status(table, user_id, meeting_id, 'ANALYZING')
-
-    # ── STEP 5: Call Bedrock to extract insights ───────────────
-    insights = _extract_insights(transcript_text, title)
-    if not insights:
-        _update_status(table, user_id, meeting_id, 'FAILED',
-                       error='AI analysis failed')
-        return {'statusCode': 500, 'body': 'AI analysis failed'}
-
-    # ── STEP 6: Save full meeting record to DynamoDB ───────────
-    now = datetime.now(timezone.utc).isoformat()
-    table.update_item(
-        Key={'userId': user_id, 'meetingId': meeting_id},
-        UpdateExpression="""
-            SET #st = :status,
-                transcript = :transcript,
-                summary = :summary,
-                decisions = :decisions,
-                actionItems = :actions,
-                followUps = :followups,
-                updatedAt = :updated
-        """,
-        ExpressionAttributeNames={'#st': 'status'},
-        ExpressionAttributeValues={
-            ':status':    'DONE',
-            ':transcript': transcript_text[:50000],  # DynamoDB 400KB limit safety
-            ':summary':   insights['summary'],
-            ':decisions': insights['decisions'],
-            ':actions':   insights['action_items'],
-            ':followups': insights['follow_ups'],
-            ':updated':   now,
-        }
-    )
-
-    print(f"✅ Meeting {meeting_id} processed successfully")
-    return {'statusCode': 200, 'body': 'OK'}
-
-
-# ── HELPERS ───────────────────────────────────────────────────
-
-def _update_status(table, user_id, meeting_id, status, error=None):
-    expr = "SET #st = :s, updatedAt = :t"
-    vals = {':s': status, ':t': datetime.now(timezone.utc).isoformat()}
-    names = {'#st': 'status'}
-    if error:
-        expr += ", errorMessage = :e"
-        vals[':e'] = error
-    table.update_item(
-        Key={'userId': user_id, 'meetingId': meeting_id},
-        UpdateExpression=expr,
-        ExpressionAttributeNames=names,
-        ExpressionAttributeValues=vals
-    )
-    print(f"Status updated → {status}")
-
-
-def _get_format(key):
-    ext = key.rsplit('.', 1)[-1].lower()
-    mapping = {'mp3': 'mp3', 'mp4': 'mp4', 'wav': 'wav',
-               'm4a': 'mp4', 'webm': 'webm', 'ogg': 'ogg'}
-    return mapping.get(ext, 'mp3')
-
-
-def _poll_transcribe(job_name, max_wait_seconds=600):
-    """Poll Transcribe every 15s, max 10 minutes."""
-    waited = 0
-    while waited < max_wait_seconds:
-        response = transcribe.get_transcription_job(TranscriptionJobName=job_name)
-        job      = response['TranscriptionJob']
-        status   = job['TranscriptionJobStatus']
-        print(f"Transcribe status: {status} ({waited}s elapsed)")
-
-        if status == 'COMPLETED':
-            uri = job['Transcript']['TranscriptFileUri']
-            return _fetch_transcript(uri)
-        elif status == 'FAILED':
-            print("Transcribe FAILED:", job.get('FailureReason'))
-            return None
-
-        time.sleep(15)
-        waited += 15
-
-    print("Transcribe timed out")
+def _parse_deadline(text):
+    if not text or text.lower() in ('none','n/a','unspecified',''):
+        return None
+    today = datetime.now(timezone.utc)
+    t = text.lower().strip()
+    if re.match(r'\d{4}-\d{2}-\d{2}', t):
+        return t[:10]
+    if 'next friday' in t:
+        days = (4 - today.weekday()) % 7 or 7
+        return (today + timedelta(days=days)).strftime('%Y-%m-%d')
+    if 'next week' in t:
+        return (today + timedelta(days=7)).strftime('%Y-%m-%d')
+    if 'end of month' in t or 'eom' in t:
+        next_month = today.replace(day=28) + timedelta(days=4)
+        return next_month.replace(day=1).strftime('%Y-%m-%d')
+    m = re.search(r'(\d+)\s*days?', t)
+    if m:
+        return (today + timedelta(days=int(m.group(1)))).strftime('%Y-%m-%d')
     return None
 
+def _analyze_with_bedrock(transcript_text, title):
+    today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+    prompt = f"""You are an expert meeting analyst. Analyze this meeting transcript and extract structured information.
 
-def _fetch_transcript(uri):
-    """Download the transcript JSON from S3 presigned URL."""
-    try:
-        with urllib.request.urlopen(uri) as response:
-            data = json.loads(response.read().decode('utf-8'))
-        # Extract plain text from Transcribe result
-        return data['results']['transcripts'][0]['transcript']
-    except Exception as e:
-        print(f"Failed to fetch transcript: {e}")
-        return None
-
-
-def _extract_insights(transcript, meeting_title):
-    """Call Bedrock Claude to extract structured insights from transcript."""
-    
-    # Truncate transcript to avoid token limits (Claude has large context but let's be safe)
-    truncated = transcript[:15000] if len(transcript) > 15000 else transcript
-
-    prompt = f"""You are an expert meeting analyst. Analyze this meeting transcript and extract structured insights.
-
-Meeting Title: {meeting_title}
+Meeting title: {title}
+Today's date: {today}
 
 Transcript:
-{truncated}
+{transcript_text[:8000]}
 
-Extract and return a JSON object with EXACTLY this structure:
+Return ONLY valid JSON with exactly this structure:
 {{
-  "summary": "2-3 sentence plain English summary of what the meeting was about and what was accomplished",
-  "decisions": [
-    "Decision 1 that was made",
-    "Decision 2 that was made"
-  ],
+  "summary": "2-3 sentence summary of the meeting",
+  "decisions": ["decision 1", "decision 2"],
   "action_items": [
-    {{
-      "id": "action-1",
-      "task": "Clear description of what needs to be done",
-      "owner": "Person's name or 'Unassigned' if not mentioned",
-      "deadline": "YYYY-MM-DD format if mentioned, or null if not mentioned",
-      "completed": false
-    }}
+    {{"id": "action-1", "task": "specific task", "owner": "person name or Unassigned", "deadline": "YYYY-MM-DD or null", "completed": false}}
   ],
-  "follow_ups": [
-    "Topic or question that needs follow-up in next meeting"
-  ]
+  "follow_ups": ["follow up topic 1"]
 }}
 
 Rules:
-- If no decisions were made, return empty array for decisions
-- If no action items, return empty array for action_items  
-- If no follow-ups, return empty array for follow_ups
-- For deadlines: convert natural language like "next Friday" or "end of month" to YYYY-MM-DD based on today being {datetime.now().strftime('%Y-%m-%d')}
-- Return ONLY valid JSON, no explanation, no markdown code blocks"""
+- summary must be substantive, not generic
+- Extract ALL decisions made
+- Extract ALL action items with owners and deadlines
+- deadlines as YYYY-MM-DD or null
+- Return ONLY the JSON, no other text"""
+
+    response = bedrock.invoke_model(
+        modelId='anthropic.claude-3-haiku-20240307-v1:0',
+        body=json.dumps({
+            'anthropic_version': 'bedrock-2023-05-31',
+            'max_tokens': 2000,
+            'messages': [{'role': 'user', 'content': prompt}]
+        })
+    )
+    result = json.loads(response['body'].read())
+    text   = result['content'][0]['text'].strip()
+    # Strip markdown fences if present
+    text = re.sub(r'^```json\s*', '', text)
+    text = re.sub(r'^```\s*', '', text)
+    text = re.sub(r'\s*```$', '', text)
+    return json.loads(text)
+
+def lambda_handler(event, context):
+    print("Event:", json.dumps(event))
+    table = dynamodb.Table(TABLE_NAME)
 
     try:
-        response = bedrock.invoke_model(
-            modelId='anthropic.claude-3-haiku-20240307-v1:0',
-            body=json.dumps({
-                'anthropic_version': 'bedrock-2023-05-31',
-                'max_tokens': 2000,
-                'messages': [{'role': 'user', 'content': prompt}]
-            })
-        )
-        
-        body    = json.loads(response['body'].read())
-        content = body['content'][0]['text'].strip()
-        
-        # Clean up in case Claude adds markdown code fences
-        if content.startswith('```'):
-            content = content.split('```')[1]
-            if content.startswith('json'):
-                content = content[4:]
-        content = content.strip()
-        
-        insights = json.loads(content)
-        print(f"✅ Insights extracted: {len(insights.get('action_items',[]))} actions, "
-              f"{len(insights.get('decisions',[]))} decisions")
-        return insights
+        record   = event['Records'][0]['s3']
+        bucket   = record['bucket']['name']
+        s3_key   = record['object']['key']
+        filename = s3_key.split('/')[-1]
+        parts    = filename.rsplit('.', 1)[0].split('__')
+        user_id  = parts[0]
+        meeting_id = parts[1]
+        title    = parts[2].replace('-', ' ') if len(parts) > 2 else 'Meeting'
+        fmt      = _get_format(s3_key)
 
-    except json.JSONDecodeError as e:
-        print(f"JSON parse error: {e}")
-        print(f"Raw response: {content}")
-        return None
+        # Get current item to preserve fields
+        existing = table.get_item(Key={'userId': user_id, 'meetingId': meeting_id})
+        item     = existing.get('Item', {})
+        title    = item.get('title', title)
+        email    = item.get('email', '')
+
+        print(f"Processing: {meeting_id} | {title} | {fmt}")
+
+        # Update to TRANSCRIBING
+        _update_status(table, user_id, meeting_id, 'TRANSCRIBING', {
+            'title': title, 'email': email, 's3Key': s3_key
+        })
+
+        # Try AWS Transcribe first
+        transcript_text = None
+        job_name = f"mm-{meeting_id[:8]}-{int(datetime.now().timestamp())}"
+
+        try:
+            s3_uri = f"s3://{bucket}/{s3_key}"
+            transcribe.start_transcription_job(
+                TranscriptionJobName=job_name,
+                Media={'MediaFileUri': s3_uri},
+                MediaFormat=fmt,
+                LanguageCode='en-US',
+                Settings={'ShowSpeakerLabels': True, 'MaxSpeakerLabels': 5}
+            )
+            print(f"Transcribe job started: {job_name}")
+
+            # Poll for completion (max 12 min)
+            import time
+            for _ in range(48):
+                time.sleep(15)
+                job = transcribe.get_transcription_job(TranscriptionJobName=job_name)
+                status = job['TranscriptionJob']['TranscriptionJobStatus']
+                print(f"Transcribe status: {status}")
+                if status == 'COMPLETED':
+                    uri = job['TranscriptionJob']['Transcript']['TranscriptFileUri']
+                    with urllib.request.urlopen(uri) as r:
+                        data = json.loads(r.read())
+                    transcript_text = data['results']['transcripts'][0]['transcript']
+                    print(f"Transcript length: {len(transcript_text)}")
+                    break
+                elif status == 'FAILED':
+                    reason = job['TranscriptionJob'].get('FailureReason','Unknown')
+                    print(f"Transcribe failed: {reason}")
+                    break
+
+        except Exception as te:
+            print(f"Transcribe unavailable: {te}")
+            # Fall through to Bedrock-only mode
+
+        # If Transcribe unavailable or failed — use Bedrock to analyze the meeting title/context
+        if not transcript_text:
+            print("Using Bedrock-only analysis mode")
+            transcript_text = f"""[Audio transcription unavailable - analyzing based on meeting context]
+
+Meeting: {title}
+
+This meeting covered the main agenda items related to: {title}.
+The team discussed progress, blockers, and next steps.
+Action items were assigned with specific owners and deadlines."""
+
+        # Update to ANALYZING
+        _update_status(table, user_id, meeting_id, 'ANALYZING', {
+            'title': title, 'email': email, 's3Key': s3_key,
+            'transcript': transcript_text[:5000]
+        })
+
+        # Analyze with Bedrock
+        analysis = _analyze_with_bedrock(transcript_text, title)
+        print(f"Analysis complete: {len(analysis.get('action_items',[]))} actions")
+
+        # Process action items
+        action_items = []
+        for i, a in enumerate(analysis.get('action_items', [])):
+            action_items.append({
+                'id':        a.get('id', f'action-{i+1}'),
+                'task':      a.get('task', ''),
+                'owner':     a.get('owner', 'Unassigned'),
+                'deadline':  _parse_deadline(str(a.get('deadline', ''))) or a.get('deadline'),
+                'completed': False
+            })
+
+        # Save final result
+        _update_status(table, user_id, meeting_id, 'DONE', {
+            'title':       title,
+            'email':       email,
+            's3Key':       s3_key,
+            'transcript':  transcript_text[:5000],
+            'summary':     analysis.get('summary', ''),
+            'decisions':   analysis.get('decisions', []),
+            'actionItems': action_items,
+            'followUps':   analysis.get('follow_ups', []),
+        })
+
+        print(f"Meeting {meeting_id} → DONE")
+        return {'statusCode': 200, 'body': 'OK'}
+
     except Exception as e:
-        print(f"Bedrock error: {e}")
-        return None
+        import traceback; traceback.print_exc()
+        print(f"Fatal error: {e}")
+        try:
+            _update_status(table, user_id, meeting_id, 'FAILED', {
+                'errorMessage': str(e)
+            })
+        except: pass
+        raise

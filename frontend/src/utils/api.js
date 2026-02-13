@@ -14,12 +14,13 @@ export async function getUploadUrl(title, contentType, fileSize) {
     { title, contentType, fileSize },
     { headers }
   )
-  return res.data   // { meetingId, uploadUrl, s3Key }
+  return res.data
 }
 
 export async function uploadAudioToS3(uploadUrl, file) {
+  // No Content-Type header — must match what was signed (nothing)
   await axios.put(uploadUrl, file, {
-    headers: { 'Content-Type': file.type },
+    headers: {},
     onUploadProgress: () => {}
   })
 }
