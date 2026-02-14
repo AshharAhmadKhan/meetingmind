@@ -1,291 +1,311 @@
 import React, { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
+import { checkSession } from '../utils/auth.js'
 import { getMeeting, updateAction } from '../utils/api.js'
-import { ArrowLeft, CheckCircle, Circle, Clock,
-         AlertTriangle, User, Calendar, Loader,
-         Mic, Lightbulb, ListChecks, MessageSquare } from 'lucide-react'
-
-function Section({ icon, title, children, accent = '#3b82f6' }) {
-  return (
-    <div style={sec.wrap}>
-      <div style={sec.header}>
-        <div style={{...sec.iconBox, background: `${accent}18`, border: `1px solid ${accent}30`}}>
-          {React.cloneElement(icon, { size: 16, color: accent })}
-        </div>
-        <h2 style={sec.title}>{title}</h2>
-      </div>
-      {children}
-    </div>
-  )
-}
-
-const sec = {
-  wrap:    { background: '#0d1629', border: '1px solid #1e2f50', borderRadius: 14, padding: 24, marginBottom: 20 },
-  header:  { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 },
-  iconBox: { width: 32, height: 32, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' },
-  title:   { fontFamily: 'Syne, sans-serif', fontSize: 15, fontWeight: 700, color: '#f0f4ff' },
-}
-
-function ActionItem({ action, meetingId, onToggle }) {
-  const [loading, setLoading] = useState(false)
-  const isOverdue = action.deadline &&
-    !action.completed &&
-    new Date(action.deadline) < new Date()
-
-  async function toggle() {
-    setLoading(true)
-    try { await onToggle(action.id, !action.completed) }
-    finally { setLoading(false) }
-  }
-
-  return (
-    <div style={{
-      ...ai.item,
-      opacity: action.completed ? 0.6 : 1,
-      borderLeft: `3px solid ${action.completed ? '#10b981' : isOverdue ? '#ef4444' : '#1e2f50'}`,
-    }}>
-      <button onClick={toggle} disabled={loading} style={ai.check}>
-        {loading
-          ? <Loader size={18} color="#4a5f84" style={{animation:'spin 1s linear infinite'}}/>
-          : action.completed
-            ? <CheckCircle size={18} color="#10b981"/>
-            : <Circle size={18} color="#4a5f84"/>
-        }
-      </button>
-
-      <div style={ai.body}>
-        <p style={{
-          ...ai.task,
-          textDecoration: action.completed ? 'line-through' : 'none',
-          color: action.completed ? '#4a5f84' : '#f0f4ff',
-        }}>
-          {action.task}
-        </p>
-        <div style={ai.meta}>
-          {action.owner && action.owner !== 'Unassigned' && (
-            <span style={ai.tag}>
-              <User size={10}/> {action.owner}
-            </span>
-          )}
-          {action.deadline && (
-            <span style={{...ai.tag, color: isOverdue && !action.completed ? '#fca5a5' : '#8da0c4'}}>
-              {isOverdue && !action.completed && <AlertTriangle size={10}/>}
-              <Calendar size={10}/> {action.deadline}
-              {isOverdue && !action.completed && ' — Overdue'}
-            </span>
-          )}
-          {action.completed && (
-            <span style={{...ai.tag, color: '#6ee7b7'}}>
-              <CheckCircle size={10}/> Completed
-            </span>
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-const ai = {
-  item:  { display: 'flex', alignItems: 'flex-start', gap: 12,
-           background: '#111e35', borderRadius: 8, padding: '12px 14px',
-           marginBottom: 8, transition: 'opacity 0.18s' },
-  check: { background: 'none', border: 'none', cursor: 'pointer',
-           padding: 0, marginTop: 2, flexShrink: 0 },
-  body:  { flex: 1, minWidth: 0 },
-  task:  { fontSize: 14, lineHeight: 1.5, marginBottom: 6, transition: 'all 0.18s' },
-  meta:  { display: 'flex', flexWrap: 'wrap', gap: 8 },
-  tag:   { display: 'flex', alignItems: 'center', gap: 4,
-           fontSize: 11, color: '#8da0c4' },
-}
 
 export default function MeetingDetail() {
   const { meetingId } = useParams()
-  const navigate      = useNavigate()
+  const navigate = useNavigate()
   const [meeting, setMeeting] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error,   setError]   = useState('')
+  const [tab,     setTab]     = useState('actions')
 
   useEffect(() => {
-    getMeeting(meetingId)
-      .then(setMeeting)
-      .catch(() => setError('Failed to load meeting'))
-      .finally(() => setLoading(false))
-  }, [meetingId])
+    checkSession().then(u => { if (!u) navigate('/login') })
+    fetchMeeting()
+  }, [])
 
-  async function handleToggle(actionId, completed) {
-    await updateAction(meetingId, actionId, completed)
-    setMeeting(prev => ({
-      ...prev,
-      actionItems: prev.actionItems.map(a =>
-        a.id === actionId ? { ...a, completed } : a
-      )
-    }))
+  async function fetchMeeting() {
+    try {
+      const data = await getMeeting(meetingId)
+      setMeeting(data)
+    } catch (e) {
+      setError('Failed to load meeting')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function toggleAction(actionId, current) {
+    try {
+      await updateAction(meetingId, actionId, !current)
+      setMeeting(m => ({
+        ...m,
+        actionItems: m.actionItems.map(a =>
+          a.id === actionId ? { ...a, completed: !current } : a
+        )
+      }))
+    } catch (e) {
+      setError('Failed to update action')
+    }
+  }
+
+  function deadlineColor(deadline) {
+    if (!deadline) return '#555548'
+    const days = Math.ceil((new Date(deadline) - new Date()) / 86400000)
+    if (days < 0)  return '#e87a6a'
+    if (days <= 3) return '#e8c06a'
+    return '#c8f04a'
+  }
+
+  function deadlineLabel(deadline) {
+    if (!deadline) return null
+    const days = Math.ceil((new Date(deadline) - new Date()) / 86400000)
+    if (days < 0)  return `${Math.abs(days)}d overdue`
+    if (days === 0) return 'Due today'
+    if (days === 1) return 'Due tomorrow'
+    return new Date(deadline).toLocaleDateString('en-GB', {day:'numeric', month:'short'})
   }
 
   if (loading) return (
-    <div style={pg.center}>
-      <Loader size={32} color="#3b82f6" style={{animation:'spin 1s linear infinite'}}/>
-      <p style={{color:'#4a5f84', marginTop: 16}}>Loading meeting…</p>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    <div style={{...s.root, display:'flex', alignItems:'center', justifyContent:'center'}}>
+      <style>{fonts}</style>
+      <div style={{...s.spinner, animation:'spin 1s linear infinite'}}/>
     </div>
   )
 
-  if (error) return (
-    <div style={pg.center}>
-      <p style={{color:'#fca5a5'}}>{error}</p>
-      <button onClick={() => navigate('/')} style={pg.backBtn}>← Back</button>
+  if (error || !meeting) return (
+    <div style={{...s.root, display:'flex', alignItems:'center', justifyContent:'center'}}>
+      <style>{fonts}</style>
+      <div style={{textAlign:'center'}}>
+        <p style={{color:'#e87a6a', marginBottom:16, fontSize:13}}>{error || 'Meeting not found'}</p>
+        <button onClick={() => navigate('/')} style={s.backBtn}>← Back to dashboard</button>
+      </div>
     </div>
   )
 
-  const done    = meeting.actionItems?.filter(a => a.completed).length || 0
-  const total   = meeting.actionItems?.length || 0
+  const actions   = meeting.actionItems   || []
+  const decisions = meeting.decisions     || []
+  const followUps = meeting.followUps     || []
+  const done      = actions.filter(a => a.completed).length
+  const pct       = actions.length ? Math.round((done / actions.length) * 100) : 0
 
   return (
-    <div style={pg.root}>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    <div style={s.root}>
+      <style>{fonts}</style>
 
-      {/* Header */}
-      <header style={pg.header}>
-        <div style={pg.headerInner}>
-          <button onClick={() => navigate('/')} style={pg.backBtnTop}>
-            <ArrowLeft size={16}/> Back
-          </button>
-          <div style={pg.headerTitle}>
-            <div style={pg.logoIcon}><Mic size={16} color="#3b82f6"/></div>
-            <span style={pg.logoText}>MeetingMind</span>
-          </div>
+      {/* HEADER */}
+      <header style={s.hdr}>
+        <button onClick={() => navigate('/')} style={s.backBtn}>← Meetings</button>
+        <div style={s.hdrMeta}>
+          <span style={s.statusDot}>● Done</span>
+          <span style={s.hdrDate}>
+            {new Date(meeting.createdAt).toLocaleDateString('en-GB',
+              {day:'numeric', month:'long', year:'numeric'})}
+          </span>
         </div>
       </header>
 
-      <main style={pg.main}>
-        {/* Title block */}
-        <div style={pg.titleBlock}>
-          <h1 style={pg.meetingName}>{meeting.title}</h1>
-          <div style={pg.titleMeta}>
-            <span style={pg.metaItem}>
-              <Calendar size={13}/>
-              {new Date(meeting.createdAt).toLocaleDateString('en-US',
-                {weekday:'long', year:'numeric', month:'long', day:'numeric'})}
-            </span>
-            {total > 0 && (
-              <span style={pg.metaItem}>
-                <ListChecks size={13}/>
-                {done}/{total} actions complete
-              </span>
+      {/* HERO */}
+      <div style={s.hero}>
+        <h1 style={s.heroTitle}>{meeting.title}</h1>
+        {meeting.summary && <p style={s.heroSummary}>{meeting.summary}</p>}
+
+        {/* Progress bar */}
+        {actions.length > 0 && (
+          <div style={s.progressWrap}>
+            <div style={s.progressMeta}>
+              <span style={s.progressLabel}>ACTION ITEMS</span>
+              <span style={s.progressCount}>{done}/{actions.length} complete</span>
+            </div>
+            <div style={s.progressTrack}>
+              <div style={{...s.progressFill, width:`${pct}%`}}/>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* TABS */}
+      <div style={s.tabBar}>
+        {[
+          {id:'actions',   label:`Actions (${actions.length})`},
+          {id:'decisions', label:`Decisions (${decisions.length})`},
+          {id:'transcript',label:'Transcript'},
+          {id:'followups', label:`Follow-ups (${followUps.length})`},
+        ].map(t => (
+          <button key={t.id} onClick={() => setTab(t.id)}
+            style={{...s.tab, ...(tab===t.id ? s.tabActive : {})}}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* CONTENT */}
+      <main style={s.main}>
+
+        {/* ACTIONS */}
+        {tab === 'actions' && (
+          <div style={s.section}>
+            {actions.length === 0 ? (
+              <p style={s.empty}>No action items extracted</p>
+            ) : (
+              <ul style={s.actionList}>
+                {actions.map(a => (
+                  <li key={a.id}
+                    onClick={() => toggleAction(a.id, a.completed)}
+                    style={{...s.actionRow, opacity: a.completed ? 0.5 : 1}}>
+                    <div style={{...s.checkbox, ...(a.completed ? s.checkboxDone : {})}}>
+                      {a.completed && <span style={s.checkmark}>✓</span>}
+                    </div>
+                    <div style={s.actionBody}>
+                      <p style={{
+                        ...s.actionTask,
+                        textDecoration: a.completed ? 'line-through' : 'none',
+                        color: a.completed ? '#555548' : '#e8e4d0'
+                      }}>{a.task}</p>
+                      <div style={s.actionMeta}>
+                        {a.owner && a.owner !== 'Unassigned' && (
+                          <span style={s.owner}>{a.owner}</span>
+                        )}
+                        {a.deadline && (
+                          <span style={{...s.deadline, color: deadlineColor(a.deadline)}}>
+                            {deadlineLabel(a.deadline)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
             )}
           </div>
-          {/* Progress bar */}
-          {total > 0 && (
-            <div style={pg.progressWrap}>
-              <div style={{...pg.progressBar, width: `${(done/total)*100}%`}} />
-            </div>
-          )}
-        </div>
-
-        {/* Summary */}
-        {meeting.summary && (
-          <Section icon={<Mic/>} title="Summary" accent="#3b82f6">
-            <p style={pg.summaryText}>{meeting.summary}</p>
-          </Section>
         )}
 
-        {/* Decisions */}
-        {meeting.decisions?.length > 0 && (
-          <Section icon={<Lightbulb/>} title="Key Decisions" accent="#f59e0b">
-            <ol style={pg.decisionList}>
-              {meeting.decisions.map((d, i) => (
-                <li key={i} style={pg.decisionItem}>
-                  <span style={pg.decisionNum}>{i+1}</span>
-                  <span style={pg.decisionText}>{d}</span>
-                </li>
-              ))}
-            </ol>
-          </Section>
-        )}
-
-        {/* Action Items */}
-        {meeting.actionItems?.length > 0 && (
-          <Section icon={<ListChecks/>} title={`Action Items (${done}/${total} done)`} accent="#10b981">
-            {meeting.actionItems.map(a => (
-              <ActionItem
-                key={a.id}
-                action={a}
-                meetingId={meetingId}
-                onToggle={handleToggle}
-              />
-            ))}
-          </Section>
-        )}
-
-        {/* Follow-ups */}
-        {meeting.followUps?.length > 0 && (
-          <Section icon={<MessageSquare/>} title="Follow-ups for Next Meeting" accent="#8b5cf6">
-            <ul style={pg.followList}>
-              {meeting.followUps.map((f, i) => (
-                <li key={i} style={pg.followItem}>
-                  <span style={pg.followDot}/>
-                  <span style={pg.followText}>{f}</span>
-                </li>
-              ))}
-            </ul>
-          </Section>
-        )}
-
-        {/* Empty state */}
-        {!meeting.summary && !meeting.decisions?.length &&
-         !meeting.actionItems?.length && !meeting.followUps?.length && (
-          <div style={pg.emptyInsights}>
-            <Loader size={24} color="#3b82f6" style={{animation:'spin 1s linear infinite'}}/>
-            <p style={{color:'#4a5f84', marginTop: 12}}>AI is analyzing this meeting…</p>
+        {/* DECISIONS */}
+        {tab === 'decisions' && (
+          <div style={s.section}>
+            {decisions.length === 0 ? (
+              <p style={s.empty}>No decisions extracted</p>
+            ) : (
+              <ul style={s.decisionList}>
+                {decisions.map((d, i) => (
+                  <li key={i} style={s.decisionRow}>
+                    <span style={s.decisionN}>{String(i+1).padStart(2,'0')}</span>
+                    <p style={s.decisionText}>{d}</p>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         )}
+
+        {/* TRANSCRIPT */}
+        {tab === 'transcript' && (
+          <div style={s.section}>
+            {meeting.transcript ? (
+              <pre style={s.transcript}>{meeting.transcript}</pre>
+            ) : (
+              <p style={s.empty}>Transcript not available</p>
+            )}
+          </div>
+        )}
+
+        {/* FOLLOW-UPS */}
+        {tab === 'followups' && (
+          <div style={s.section}>
+            {followUps.length === 0 ? (
+              <p style={s.empty}>No follow-up items</p>
+            ) : (
+              <ul style={s.decisionList}>
+                {followUps.map((f, i) => (
+                  <li key={i} style={s.decisionRow}>
+                    <span style={s.decisionN}>{String(i+1).padStart(2,'0')}</span>
+                    <p style={s.decisionText}>{f}</p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+
       </main>
     </div>
   )
 }
 
-const pg = {
-  root:        { minHeight: '100vh', background: '#070d1a' },
-  center:      { minHeight: '100vh', display: 'flex', flexDirection: 'column',
-                 alignItems: 'center', justifyContent: 'center' },
-  header:      { background: '#0d1629', borderBottom: '1px solid #1e2f50',
-                 padding: '0 32px', height: 60, position: 'sticky', top: 0, zIndex: 100 },
-  headerInner: { maxWidth: 800, margin: '0 auto', height: '100%',
-                 display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
-  backBtnTop:  { display: 'flex', alignItems: 'center', gap: 6,
-                 background: 'none', border: 'none', color: '#8da0c4',
-                 cursor: 'pointer', fontSize: 14, fontFamily: 'DM Sans, sans-serif' },
-  backBtn:     { marginTop: 16, background: 'none', border: '1px solid #1e2f50',
-                 borderRadius: 8, padding: '8px 16px', color: '#8da0c4',
-                 cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' },
-  headerTitle: { display: 'flex', alignItems: 'center', gap: 8 },
-  logoIcon:    { width: 30, height: 30, background: 'rgba(59,130,246,0.12)',
-                 border: '1px solid rgba(59,130,246,0.25)', borderRadius: 7,
-                 display: 'flex', alignItems: 'center', justifyContent: 'center' },
-  logoText:    { fontFamily: 'Syne, sans-serif', fontSize: 15, fontWeight: 700, color: '#f0f4ff' },
-  main:        { maxWidth: 800, margin: '0 auto', padding: '32px' },
-  titleBlock:  { marginBottom: 28 },
-  meetingName: { fontFamily: 'Syne, sans-serif', fontSize: 32, fontWeight: 800,
-                 color: '#f0f4ff', letterSpacing: '-0.5px', marginBottom: 12, lineHeight: 1.2 },
-  titleMeta:   { display: 'flex', alignItems: 'center', gap: 20, marginBottom: 14 },
-  metaItem:    { display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#8da0c4' },
-  progressWrap:{ height: 4, background: '#111e35', borderRadius: 2 },
-  progressBar: { height: '100%', background: '#10b981', borderRadius: 2, transition: 'width 0.4s ease' },
-  summaryText: { fontSize: 15, color: '#c5d4f0', lineHeight: 1.75 },
-  decisionList:{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 10 },
-  decisionItem:{ display: 'flex', alignItems: 'flex-start', gap: 12,
-                 background: '#111e35', borderRadius: 8, padding: '12px 14px' },
-  decisionNum: { width: 24, height: 24, background: 'rgba(245,158,11,0.12)',
-                 border: '1px solid rgba(245,158,11,0.2)', borderRadius: 6,
-                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                 fontSize: 12, fontWeight: 700, color: '#f59e0b', flexShrink: 0 },
-  decisionText:{ fontSize: 14, color: '#f0f4ff', lineHeight: 1.5 },
-  followList:  { display: 'flex', flexDirection: 'column', gap: 8 },
-  followItem:  { display: 'flex', alignItems: 'flex-start', gap: 10,
-                 background: '#111e35', borderRadius: 8, padding: '10px 14px' },
-  followDot:   { width: 6, height: 6, borderRadius: '50%', background: '#8b5cf6',
-                 marginTop: 6, flexShrink: 0 },
-  followText:  { fontSize: 14, color: '#c5d4f0', lineHeight: 1.5 },
-  emptyInsights: { display: 'flex', flexDirection: 'column', alignItems: 'center',
-                   padding: '60px 0' },
+const fonts = `
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Mono:wght@300;400&display=swap');
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:#0c0c09;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+  li[style*='cursor']:hover{background:#1a1a12 !important;}
+`
+
+const s = {
+  root:     {minHeight:'100vh', background:'#0c0c09',
+             fontFamily:"'DM Mono',monospace", color:'#f0ece0'},
+  spinner:  {width:24, height:24, border:'2px solid #2a2a20',
+             borderTopColor:'#c8f04a', borderRadius:'50%'},
+
+  hdr:      {background:'#0f0f0c', borderBottom:'1px solid #2a2a20',
+             padding:'0 40px', height:54,
+             display:'flex', alignItems:'center', justifyContent:'space-between',
+             position:'sticky', top:0, zIndex:100},
+  backBtn:  {background:'none', border:'1px solid #2a2a20', borderRadius:3,
+             padding:'6px 14px', color:'#8a8a74', fontSize:10,
+             letterSpacing:'0.1em', cursor:'pointer',
+             fontFamily:"'DM Mono',monospace"},
+  hdrMeta:  {display:'flex', alignItems:'center', gap:16},
+  statusDot:{fontSize:10, letterSpacing:'0.08em', color:'#c8f04a'},
+  hdrDate:  {fontSize:10, letterSpacing:'0.06em', color:'#555548'},
+
+  hero:     {padding:'40px 40px 32px', borderBottom:'1px solid #1a1a14',
+             animation:'fadeUp 0.4s ease both'},
+  heroTitle:{fontFamily:"'Playfair Display',serif", fontSize:'clamp(24px,4vw,42px)',
+             fontWeight:700, color:'#f0ece0', letterSpacing:'-0.5px', marginBottom:14},
+  heroSummary:{fontSize:13, color:'#8a8a74', lineHeight:1.7, maxWidth:700,
+               marginBottom:24, letterSpacing:'0.02em'},
+
+  progressWrap:{maxWidth:500},
+  progressMeta:{display:'flex', justifyContent:'space-between', marginBottom:8},
+  progressLabel:{fontSize:9, letterSpacing:'0.15em', color:'#555548', textTransform:'uppercase'},
+  progressCount:{fontSize:10, color:'#c8f04a', letterSpacing:'0.06em'},
+  progressTrack:{height:3, background:'#1a1a14', borderRadius:2},
+  progressFill: {height:'100%', background:'#c8f04a', borderRadius:2,
+                 transition:'width 0.5s ease'},
+
+  tabBar:   {display:'flex', gap:0, borderBottom:'1px solid #1a1a14',
+             padding:'0 40px', background:'#0f0f0c'},
+  tab:      {background:'none', border:'none', borderBottom:'2px solid transparent',
+             padding:'14px 20px', color:'#555548', fontSize:10,
+             letterSpacing:'0.1em', cursor:'pointer',
+             fontFamily:"'DM Mono',monospace", textTransform:'uppercase',
+             transition:'color 0.15s, border-color 0.15s'},
+  tabActive:{color:'#c8f04a', borderBottomColor:'#c8f04a'},
+
+  main:     {padding:'32px 40px', maxWidth:800, animation:'fadeUp 0.4s ease 0.1s both'},
+  section:  {},
+  empty:    {fontSize:12, color:'#444438', letterSpacing:'0.05em', padding:'32px 0'},
+
+  actionList:{listStyle:'none', display:'flex', flexDirection:'column', gap:6},
+  actionRow: {display:'flex', alignItems:'flex-start', gap:14,
+              background:'#111108', border:'1px solid #1e1e14',
+              borderRadius:6, padding:'14px 16px', cursor:'pointer',
+              transition:'background 0.15s, border-color 0.15s'},
+  checkbox:  {width:18, height:18, border:'1px solid #3a3a2e', borderRadius:3,
+              flexShrink:0, marginTop:1, display:'flex',
+              alignItems:'center', justifyContent:'center',
+              transition:'background 0.15s, border-color 0.15s'},
+  checkboxDone:{background:'#c8f04a', borderColor:'#c8f04a'},
+  checkmark: {fontSize:10, color:'#0c0c09', fontWeight:700},
+  actionBody:{flex:1},
+  actionTask:{fontSize:13, color:'#e8e4d0', marginBottom:6, lineHeight:1.5},
+  actionMeta:{display:'flex', gap:12, alignItems:'center'},
+  owner:     {fontSize:10, color:'#6b7260', letterSpacing:'0.06em'},
+  deadline:  {fontSize:10, letterSpacing:'0.06em'},
+
+  decisionList:{listStyle:'none', display:'flex', flexDirection:'column', gap:8},
+  decisionRow: {display:'flex', gap:16, alignItems:'flex-start',
+                padding:'14px 16px', background:'#111108',
+                border:'1px solid #1e1e14', borderRadius:6},
+  decisionN:   {fontFamily:"'Playfair Display',serif", fontSize:20, fontWeight:700,
+                color:'#2a2a22', lineHeight:1, flexShrink:0, marginTop:2},
+  decisionText:{fontSize:13, color:'#a8a890', lineHeight:1.6, letterSpacing:'0.02em'},
+
+  transcript:  {fontSize:11, color:'#6b7260', lineHeight:1.8, letterSpacing:'0.03em',
+                whiteSpace:'pre-wrap', background:'#111108',
+                border:'1px solid #1e1e14', borderRadius:6,
+                padding:'20px', maxHeight:500, overflowY:'auto'},
 }
