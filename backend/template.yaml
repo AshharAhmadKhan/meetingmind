@@ -7,12 +7,15 @@ Globals:
     Timeout: 60
     MemorySize: 256
     Runtime: python3.11
+    Tracing: Active  # Enable X-Ray tracing for all Lambda functions
     Environment:
       Variables:
         MEETINGS_TABLE: !Ref MeetingsTable
         AUDIO_BUCKET:   !Ref AudioBucket
         REGION:         !Ref AWS::Region
         SNS_TOPIC_ARN:  !Ref ReminderTopic
+        FRONTEND_URL:   https://dcfx593ywvy92.cloudfront.net
+        SES_FROM_EMAIL: thecyberprinciples@gmail.com
 
 Resources:
 
@@ -87,6 +90,7 @@ Resources:
     Type: AWS::Serverless::Api
     Properties:
       StageName: prod
+      TracingEnabled: true  # Enable X-Ray tracing for API Gateway
       Cors:
         AllowMethods: "'GET,POST,PUT,OPTIONS'"
         AllowHeaders: "'Content-Type,Authorization'"
@@ -141,6 +145,11 @@ Resources:
             - Effect: Allow
               Action:
                 - bedrock:InvokeModel
+              Resource: "*"
+            - Effect: Allow
+              Action:
+                - ses:SendEmail
+                - ses:SendRawEmail
               Resource: "*"
 
   # ── PERMISSION: allow S3 to invoke ProcessMeeting ─────────
@@ -301,6 +310,71 @@ Resources:
             Schedule: cron(0 8 * * ? *)
             Description: Daily reminder at 8AM UTC
 
+  # ── CLOUDWATCH DASHBOARD ───────────────────────────────────
+  MeetingMindDashboard:
+    Type: AWS::CloudWatch::Dashboard
+    Properties:
+      DashboardName: MeetingMind-Production
+      DashboardBody: !Sub |
+        {
+          "widgets": [
+            {
+              "type": "metric",
+              "x": 0, "y": 0, "width": 12, "height": 6,
+              "properties": {
+                "title": "Lambda Invocations and Errors",
+                "metrics": [
+                  ["AWS/Lambda", "Invocations", {"stat": "Sum", "label": "Invocations"}],
+                  ["AWS/Lambda", "Errors", {"stat": "Sum", "label": "Errors"}]
+                ],
+                "period": 300,
+                "region": "${AWS::Region}",
+                "view": "timeSeries"
+              }
+            },
+            {
+              "type": "metric",
+              "x": 12, "y": 0, "width": 12, "height": 6,
+              "properties": {
+                "title": "API Gateway Requests",
+                "metrics": [
+                  ["AWS/ApiGateway", "Count", {"stat": "Sum", "label": "Requests"}],
+                  ["AWS/ApiGateway", "5XXError", {"stat": "Sum", "label": "5xx Errors"}]
+                ],
+                "period": 300,
+                "region": "${AWS::Region}",
+                "view": "timeSeries"
+              }
+            },
+            {
+              "type": "metric",
+              "x": 0, "y": 6, "width": 12, "height": 6,
+              "properties": {
+                "title": "Lambda Duration ms",
+                "metrics": [
+                  ["AWS/Lambda", "Duration", {"stat": "Average", "label": "Avg Duration"}]
+                ],
+                "period": 300,
+                "region": "${AWS::Region}",
+                "view": "timeSeries"
+              }
+            },
+            {
+              "type": "metric",
+              "x": 12, "y": 6, "width": 12, "height": 6,
+              "properties": {
+                "title": "DynamoDB Capacity",
+                "metrics": [
+                  ["AWS/DynamoDB", "ConsumedReadCapacityUnits", {"stat": "Sum", "label": "Reads"}],
+                  ["AWS/DynamoDB", "ConsumedWriteCapacityUnits", {"stat": "Sum", "label": "Writes"}]
+                ],
+                "period": 300,
+                "region": "${AWS::Region}",
+                "view": "timeSeries"
+              }
+            }
+          ]
+        }
 Outputs:
   ApiUrl:
     Description: API Gateway URL

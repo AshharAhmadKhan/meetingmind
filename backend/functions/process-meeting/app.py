@@ -6,12 +6,20 @@ import time
 import urllib.request
 from datetime import datetime, timezone, timedelta
 
+# X-Ray instrumentation
+from aws_xray_sdk.core import xray_recorder
+from aws_xray_sdk.core import patch_all
+patch_all()  # Auto-instrument boto3, requests, etc.
+
 REGION     = os.environ.get('REGION', 'ap-south-1')
 TABLE_NAME = os.environ.get('MEETINGS_TABLE', 'meetingmind-meetings')
+FRONTEND_URL = os.environ.get('FRONTEND_URL', 'https://dcfx593ywvy92.cloudfront.net')
+SES_FROM_EMAIL = os.environ.get('SES_FROM_EMAIL', 'thecyberprinciples@gmail.com')
 
 dynamodb   = boto3.resource('dynamodb', region_name=REGION)
 bedrock    = boto3.client('bedrock-runtime', region_name=REGION)
 transcribe = boto3.client('transcribe', region_name=REGION)
+ses        = boto3.client('ses', region_name=REGION)
 
 def _update(table, user_id, meeting_id, status, extra=None):
     item = {'userId': user_id, 'meetingId': meeting_id, 'status': status,
@@ -22,6 +30,104 @@ def _update(table, user_id, meeting_id, status, extra=None):
 def _get_format(s3_key):
     ext = s3_key.rsplit('.', 1)[-1].lower()
     return {'mp3':'mp3','wav':'wav','m4a':'mp4','mp4':'mp4','webm':'webm'}.get(ext,'mp3')
+
+def _send_email_notification(email, meeting_id, title, status, summary='', action_count=0, error_message=''):
+    """Send email notification via Amazon SES when meeting processing completes."""
+    if not email:
+        print("No email address provided, skipping notification")
+        return
+    
+    meeting_url = f"{FRONTEND_URL}/meeting/{meeting_id}"
+    
+    try:
+        if status == 'DONE':
+            subject = f"✅ Meeting Analysis Complete: {title}"
+            body_text = f"""Your meeting "{title}" has been processed successfully!
+
+View your analysis: {meeting_url}
+
+Summary: {summary if summary else 'Analysis complete'}
+
+Action Items: {action_count}
+
+Thank you for using MeetingMind!
+
+---
+MeetingMind - AI Meeting Intelligence Assistant
+"""
+            body_html = f"""<html>
+<head></head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+    <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h2 style="color: #4CAF50;">✅ Meeting Analysis Complete</h2>
+        <h3 style="color: #555;">{title}</h3>
+        
+        <p>Your meeting has been processed successfully!</p>
+        
+        <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0;">
+            <p><strong>Summary:</strong></p>
+            <p>{summary if summary else 'Analysis complete'}</p>
+        </div>
+        
+        <p><strong>Action Items Extracted:</strong> {action_count}</p>
+        
+        <a href="{meeting_url}" style="display: inline-block; background-color: #4CAF50; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 20px 0;">View Full Analysis</a>
+        
+        <hr style="margin: 30px 0; border: none; border-top: 1px solid #ddd;">
+        <p style="color: #888; font-size: 12px;">MeetingMind - AI Meeting Intelligence Assistant</p>
+    </div>
+</body>
+</html>"""
+        else:  # FAILED
+            subject = f"❌ Meeting Processing Failed: {title}"
+            body_text = f"""Unfortunately, we couldn't process your meeting "{title}".
+
+Error: {error_message if error_message else 'Unknown error occurred'}
+
+Please try uploading the audio file again. If the problem persists, contact support.
+
+---
+MeetingMind - AI Meeting Intelligence Assistant
+"""
+            body_html = f"""<html>
+<head></head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+    <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h2 style="color: #f44336;">❌ Meeting Processing Failed</h2>
+        <h3 style="color: #555;">{title}</h3>
+        
+        <p>Unfortunately, we couldn't process your meeting.</p>
+        
+        <div style="background-color: #ffebee; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #f44336;">
+            <p><strong>Error:</strong></p>
+            <p>{error_message if error_message else 'Unknown error occurred'}</p>
+        </div>
+        
+        <p>Please try uploading the audio file again. If the problem persists, contact support.</p>
+        
+        <hr style="margin: 30px 0; border: none; border-top: 1px solid #ddd;">
+        <p style="color: #888; font-size: 12px;">MeetingMind - AI Meeting Intelligence Assistant</p>
+    </div>
+</body>
+</html>"""
+        
+        # Send email via SES
+        response = ses.send_email(
+            Source=SES_FROM_EMAIL,
+            Destination={'ToAddresses': [email]},
+            Message={
+                'Subject': {'Data': subject, 'Charset': 'UTF-8'},
+                'Body': {
+                    'Text': {'Data': body_text, 'Charset': 'UTF-8'},
+                    'Html': {'Data': body_html, 'Charset': 'UTF-8'}
+                }
+            }
+        )
+        print(f"Email sent successfully to {email}. MessageId: {response['MessageId']}")
+        
+    except Exception as e:
+        print(f"Failed to send email notification: {e}")
+        # Don't raise - email failure shouldn't break the pipeline
 
 def _days_from_now(n):
     return (datetime.now(timezone.utc) + timedelta(days=n)).strftime('%Y-%m-%d')
@@ -185,21 +291,23 @@ def lambda_handler(event, context):
     user_id = meeting_id = None
 
     try:
-        record     = event['Records'][0]['s3']
-        bucket     = record['bucket']['name']
-        s3_key     = record['object']['key']
-        filename   = s3_key.split('/')[-1]
-        parts      = filename.rsplit('.', 1)[0].split('__')
-        user_id    = parts[0]
-        meeting_id = parts[1]
-        fmt        = _get_format(s3_key)
+        # Parse S3 event
+        with xray_recorder.capture('parse_s3_event'):
+            record     = event['Records'][0]['s3']
+            bucket     = record['bucket']['name']
+            s3_key     = record['object']['key']
+            filename   = s3_key.split('/')[-1]
+            parts      = filename.rsplit('.', 1)[0].split('__')
+            user_id    = parts[0]
+            meeting_id = parts[1]
+            fmt        = _get_format(s3_key)
 
-        existing = table.get_item(Key={'userId': user_id, 'meetingId': meeting_id})
-        item     = existing.get('Item', {})
-        title    = item.get('title', parts[2].replace('-',' ') if len(parts)>2 else 'Meeting')
-        email    = item.get('email', '')
+            existing = table.get_item(Key={'userId': user_id, 'meetingId': meeting_id})
+            item     = existing.get('Item', {})
+            title    = item.get('title', parts[2].replace('-',' ') if len(parts)>2 else 'Meeting')
+            email    = item.get('email', '')
 
-        print(f"Processing: {meeting_id} | {title}")
+            print(f"Processing: {meeting_id} | {title}")
 
         # TRANSCRIBING phase
         _update(table, user_id, meeting_id, 'TRANSCRIBING',
@@ -208,31 +316,32 @@ def lambda_handler(event, context):
         transcript_text = None
 
         # Try AWS Transcribe
-        try:
-            job_name = f"mm-{meeting_id[:8]}-{int(datetime.now().timestamp())}"
-            transcribe.start_transcription_job(
-                TranscriptionJobName=job_name,
-                Media={'MediaFileUri': f"s3://{bucket}/{s3_key}"},
-                MediaFormat=fmt, LanguageCode='en-US',
-                Settings={'ShowSpeakerLabels':True,'MaxSpeakerLabels':5}
-            )
-            for _ in range(48):
-                time.sleep(15)
-                job = transcribe.get_transcription_job(TranscriptionJobName=job_name)
-                status = job['TranscriptionJob']['TranscriptionJobStatus']
-                print(f"Transcribe: {status}")
-                if status == 'COMPLETED':
-                    uri = job['TranscriptionJob']['Transcript']['TranscriptFileUri']
-                    with urllib.request.urlopen(uri) as r:
-                        data = json.loads(r.read())
-                    transcript_text = data['results']['transcripts'][0]['transcript']
-                    print(f"Transcript: {len(transcript_text)} chars")
-                    break
-                elif status == 'FAILED':
-                    print(f"Transcribe failed: {job['TranscriptionJob'].get('FailureReason')}")
-                    break
-        except Exception as te:
-            print(f"Transcribe unavailable: {te}")
+        with xray_recorder.capture('transcribe_audio'):
+            try:
+                job_name = f"mm-{meeting_id[:8]}-{int(datetime.now().timestamp())}"
+                transcribe.start_transcription_job(
+                    TranscriptionJobName=job_name,
+                    Media={'MediaFileUri': f"s3://{bucket}/{s3_key}"},
+                    MediaFormat=fmt, LanguageCode='en-US',
+                    Settings={'ShowSpeakerLabels':True,'MaxSpeakerLabels':5}
+                )
+                for _ in range(48):
+                    time.sleep(15)
+                    job = transcribe.get_transcription_job(TranscriptionJobName=job_name)
+                    status = job['TranscriptionJob']['TranscriptionJobStatus']
+                    print(f"Transcribe: {status}")
+                    if status == 'COMPLETED':
+                        uri = job['TranscriptionJob']['Transcript']['TranscriptFileUri']
+                        with urllib.request.urlopen(uri) as r:
+                            data = json.loads(r.read())
+                        transcript_text = data['results']['transcripts'][0]['transcript']
+                        print(f"Transcript: {len(transcript_text)} chars")
+                        break
+                    elif status == 'FAILED':
+                        print(f"Transcribe failed: {job['TranscriptionJob'].get('FailureReason')}")
+                        break
+            except Exception as te:
+                print(f"Transcribe unavailable: {te}")
 
         if not transcript_text:
             transcript_text = f"[Audio transcription pending activation]\n\nMeeting: {title}\n\nKey topics discussed included project planning, resource allocation, and timeline review."
@@ -243,7 +352,8 @@ def lambda_handler(event, context):
              'transcript': transcript_text[:5000]})
 
         # Try Bedrock — fall back to mock
-        analysis = _try_bedrock(transcript_text, title) or _mock_analysis(title)
+        with xray_recorder.capture('bedrock_analysis'):
+            analysis = _try_bedrock(transcript_text, title) or _mock_analysis(title)
 
         # Normalize action items
         action_items = []
@@ -268,13 +378,43 @@ def lambda_handler(event, context):
             'followUps':   analysis.get('follow_ups',[]),
         })
 
+        # Send success email notification
+        with xray_recorder.capture('send_email_notification'):
+            _send_email_notification(
+                email=email,
+                meeting_id=meeting_id,
+                title=title,
+                status='DONE',
+                summary=analysis.get('summary', ''),
+                action_count=len(action_items)
+            )
+
         print(f"✅ Meeting {meeting_id} → DONE")
         return {'statusCode': 200, 'body': 'OK'}
 
     except Exception as e:
         import traceback; traceback.print_exc()
+        error_msg = str(e)
         try:
             if user_id and meeting_id:
-                _update(table, user_id, meeting_id, 'FAILED', {'errorMessage': str(e)})
+                _update(table, user_id, meeting_id, 'FAILED', {'errorMessage': error_msg})
+                
+                # Send failure email notification
+                # Try to get email and title from DynamoDB if available
+                try:
+                    existing = table.get_item(Key={'userId': user_id, 'meetingId': meeting_id})
+                    item = existing.get('Item', {})
+                    email = item.get('email', '')
+                    title = item.get('title', 'Meeting')
+                    
+                    _send_email_notification(
+                        email=email,
+                        meeting_id=meeting_id,
+                        title=title,
+                        status='FAILED',
+                        error_message=error_msg
+                    )
+                except Exception as email_error:
+                    print(f"Failed to send error notification email: {email_error}")
         except: pass
         raise
