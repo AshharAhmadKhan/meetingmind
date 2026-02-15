@@ -381,7 +381,7 @@ def lambda_handler(event, context):
         # Send success email notification
         with xray_recorder.capture('send_email_notification'):
             _send_email_notification(
-                email=email,
+                email='thecyberprinciples@gmail.com',
                 meeting_id=meeting_id,
                 title=title,
                 status='DONE',
@@ -404,11 +404,11 @@ def lambda_handler(event, context):
                 try:
                     existing = table.get_item(Key={'userId': user_id, 'meetingId': meeting_id})
                     item = existing.get('Item', {})
-                    email = item.get('email', '')
+                    email = 'thecyberprinciples@gmail.com'
                     title = item.get('title', 'Meeting')
                     
                     _send_email_notification(
-                        email=email,
+                        email='thecyberprinciples@gmail.com',
                         meeting_id=meeting_id,
                         title=title,
                         status='FAILED',
@@ -418,3 +418,6 @@ def lambda_handler(event, context):
                     print(f"Failed to send error notification email: {email_error}")
         except: pass
         raise
+# redeployed Sun Feb 15 10:18:18 IST 2026
+# force Sun Feb 15 17:30:02 IST 2026
+# fix Sun Feb 15 17:49:31 IST 2026
