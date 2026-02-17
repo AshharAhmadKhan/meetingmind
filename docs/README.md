@@ -7,6 +7,7 @@ This folder contains all project documentation organized by category.
 ### `/implementation`
 Implementation details and feature documentation:
 - `DAY2_ROI_IMPLEMENTATION.md` - ROI calculation feature
+- `DAY5_DUPLICATE_DETECTION.md` - Duplicate action detection with embeddings
 - `IMPLEMENTATION_SUMMARY.md` - Overall implementation summary
 
 ### `/guides`

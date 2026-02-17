@@ -61,3 +61,9 @@ export async function getAllActions(status, owner) {
   const res = await axios.get(`${BASE}/all-actions`, { headers, params })
   return res.data
 }
+
+export async function checkDuplicate(task) {
+  const headers = await authHeaders()
+  const res = await axios.post(`${BASE}/check-duplicate`, { task }, { headers })
+  return res.data
+}

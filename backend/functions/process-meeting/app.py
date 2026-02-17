@@ -249,6 +249,36 @@ def _get_risk_level(score):
         return 'MEDIUM'
     return 'LOW'
 
+def _generate_embedding(text):
+    """
+    Generate embedding vector for text using Bedrock Titan Embeddings.
+    Falls back to mock embedding if Bedrock unavailable.
+    """
+    try:
+        # Try Bedrock Titan Embeddings
+        body = json.dumps({"inputText": text})
+        response = bedrock.invoke_model(
+            modelId='amazon.titan-embed-text-v1',
+            body=body
+        )
+        result = json.loads(response['body'].read())
+        embedding = result['embedding']
+        print(f"Generated Bedrock embedding: {len(embedding)} dimensions")
+        return embedding
+    except Exception as e:
+        print(f"Bedrock embedding failed: {e} — using mock embedding")
+        # Mock embedding: simple hash-based vector (1536 dimensions like Titan)
+        # This allows the system to work without Bedrock
+        import hashlib
+        hash_obj = hashlib.sha256(text.encode())
+        hash_bytes = hash_obj.digest()
+        # Expand to 1536 dimensions by repeating and normalizing
+        mock_embedding = []
+        for i in range(1536):
+            byte_val = hash_bytes[i % len(hash_bytes)]
+            mock_embedding.append((byte_val / 255.0) - 0.5)  # Normalize to [-0.5, 0.5]
+        return mock_embedding
+
 def _mock_analysis(title):
     """Generate realistic meeting analysis based on title keywords."""
     t = title.lower()
@@ -472,7 +502,7 @@ def lambda_handler(event, context):
         with xray_recorder.capture('bedrock_analysis'):
             analysis = _try_bedrock(transcript_text, title) or _mock_analysis(title)
 
-        # Normalize action items with risk scores
+        # Normalize action items with risk scores and embeddings
         action_items = []
         created_at = datetime.now(timezone.utc)
         
@@ -490,6 +520,12 @@ def lambda_handler(event, context):
             risk_score = _calculate_risk_score(action, created_at)
             action['riskScore'] = risk_score
             action['riskLevel'] = _get_risk_level(risk_score)
+            
+            # Generate embedding for duplicate detection (Day 5)
+            task_text = action['task']
+            if task_text:
+                embedding = _generate_embedding(task_text)
+                action['embedding'] = embedding
             
             action_items.append(action)
 

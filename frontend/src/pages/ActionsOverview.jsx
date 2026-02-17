@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { logout, checkSession } from '../utils/auth.js'
-import { getAllActions } from '../utils/api.js'
+import { getAllActions, checkDuplicate } from '../utils/api.js'
 
 const RISK_COLORS = {
   LOW:      '#c8f04a',
@@ -34,6 +34,8 @@ export default function ActionsOverview() {
   const [error, setError] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [ownerFilter, setOwnerFilter] = useState('')
+  const [checkingDuplicates, setCheckingDuplicates] = useState(false)
+  const [duplicateResults, setDuplicateResults] = useState(null)
 
   useEffect(() => {
     checkSession().then(u => {
@@ -52,6 +54,40 @@ export default function ActionsOverview() {
       setError('Failed to load action items')
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function scanForDuplicates() {
+    setCheckingDuplicates(true)
+    setDuplicateResults(null)
+    
+    try {
+      const incompleteActions = actions.filter(a => !a.completed)
+      const duplicates = []
+      
+      for (const action of incompleteActions) {
+        try {
+          const result = await checkDuplicate(action.task)
+          if (result.isDuplicate && result.similarity >= 85) {
+            duplicates.push({
+              action,
+              ...result
+            })
+          }
+        } catch (e) {
+          console.error('Failed to check duplicate for:', action.task, e)
+        }
+      }
+      
+      setDuplicateResults({
+        total: incompleteActions.length,
+        duplicates,
+        chronicBlockers: duplicates.filter(d => d.isChronicBlocker)
+      })
+    } catch (e) {
+      setError('Failed to scan for duplicates')
+    } finally {
+      setCheckingDuplicates(false)
     }
   }
 
@@ -153,11 +189,86 @@ export default function ActionsOverview() {
             </select>
           </div>
           <div style={s.filterGroup}>
+            <button onClick={scanForDuplicates} disabled={checkingDuplicates || loading}
+              style={{...s.scanBtn, ...(checkingDuplicates ? {opacity:0.5} : {})}}>
+              {checkingDuplicates ? '🔍 Scanning...' : '🔍 Check Duplicates'}
+            </button>
+          </div>
+          <div style={s.filterGroup}>
             <span style={s.resultCount}>
               {filteredActions.length} action{filteredActions.length !== 1 ? 's' : ''}
             </span>
           </div>
         </div>
+
+        {duplicateResults && (
+          <div style={s.duplicatePanel}>
+            <div style={s.duplicateHeader}>
+              <h3 style={s.duplicateTitle}>
+                🔍 Duplicate Detection Results
+              </h3>
+              <button onClick={() => setDuplicateResults(null)} style={s.closeBtn}>✕</button>
+            </div>
+            {duplicateResults.duplicates.length === 0 ? (
+              <p style={s.duplicateEmpty}>
+                ✓ No duplicates found! All {duplicateResults.total} incomplete actions are unique.
+              </p>
+            ) : (
+              <>
+                <p style={s.duplicateSummary}>
+                  Found {duplicateResults.duplicates.length} potential duplicate{duplicateResults.duplicates.length !== 1 ? 's' : ''} 
+                  {duplicateResults.chronicBlockers.length > 0 && (
+                    <span style={{color:'#e87a6a'}}>
+                      {' '}({duplicateResults.chronicBlockers.length} chronic blocker{duplicateResults.chronicBlockers.length !== 1 ? 's' : ''})
+                    </span>
+                  )}
+                </p>
+                <div style={s.duplicateList}>
+                  {duplicateResults.duplicates.map((dup, idx) => (
+                    <div key={idx} style={s.duplicateCard}>
+                      <div style={s.duplicateCardHeader}>
+                        <span style={s.similarityBadge}>
+                          {dup.similarity}% similar
+                        </span>
+                        {dup.isChronicBlocker && (
+                          <span style={s.chronicBadge}>
+                            ⚠ Chronic Blocker (repeated {dup.repeatCount}× )
+                          </span>
+                        )}
+                      </div>
+                      <p style={s.duplicateTask}>
+                        <strong>Current:</strong> {dup.action.task}
+                      </p>
+                      {dup.bestMatch && (
+                        <p style={s.duplicateMatch}>
+                          <strong>Similar to:</strong> {dup.bestMatch.task}
+                          <span style={s.duplicateMatchMeta}>
+                            {' '}from "{dup.bestMatch.meetingTitle}" 
+                            ({new Date(dup.bestMatch.createdAt).toLocaleDateString('en-GB', {day:'numeric', month:'short'})})
+                          </span>
+                        </p>
+                      )}
+                      {dup.history && dup.history.length > 1 && (
+                        <details style={s.historyDetails}>
+                          <summary style={s.historySummary}>
+                            View history ({dup.history.length} similar items)
+                          </summary>
+                          <ul style={s.historyList}>
+                            {dup.history.slice(0, 5).map((h, i) => (
+                              <li key={i} style={s.historyItem}>
+                                {h.task} ({h.similarity}% similar)
+                              </li>
+                            ))}
+                          </ul>
+                        </details>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        )}
 
         {error && <div style={s.errBox}>{error}</div>}
 
@@ -343,4 +454,34 @@ const s = {
   riskBadge:{fontSize:8, letterSpacing:'0.12em', color:'#0c0c09',
              padding:'3px 8px', borderRadius:3, fontWeight:400,
              textTransform:'uppercase'},
+  scanBtn:{background:'#2a2a20', border:'1px solid #3a3a2e', borderRadius:4,
+           padding:'8px 16px', color:'#c8f04a', fontSize:11,
+           letterSpacing:'0.05em', cursor:'pointer',
+           fontFamily:"'DM Mono',monospace", transition:'all 0.15s'},
+  duplicatePanel:{background:'#141410', border:'1px solid #3a3a2e', borderRadius:8,
+                  padding:'20px 24px', marginBottom:24},
+  duplicateHeader:{display:'flex', justifyContent:'space-between', alignItems:'center',
+                   marginBottom:16},
+  duplicateTitle:{fontSize:16, color:'#f0ece0', letterSpacing:'0.01em'},
+  closeBtn:{background:'none', border:'none', color:'#6b7260', fontSize:18,
+            cursor:'pointer', padding:0, lineHeight:1},
+  duplicateEmpty:{fontSize:12, color:'#8a8a74', padding:'12px 0'},
+  duplicateSummary:{fontSize:12, color:'#c8f04a', marginBottom:16,
+                    letterSpacing:'0.03em'},
+  duplicateList:{display:'flex', flexDirection:'column', gap:12},
+  duplicateCard:{background:'#1a1a14', border:'1px solid #2e2e22', borderRadius:6,
+                 padding:'14px 16px'},
+  duplicateCardHeader:{display:'flex', gap:10, marginBottom:10, flexWrap:'wrap'},
+  similarityBadge:{fontSize:10, letterSpacing:'0.08em', color:'#0c0c09',
+                   background:'#e8c06a', padding:'3px 10px', borderRadius:3},
+  chronicBadge:{fontSize:10, letterSpacing:'0.08em', color:'#0c0c09',
+                background:'#e87a6a', padding:'3px 10px', borderRadius:3},
+  duplicateTask:{fontSize:12, color:'#e8e4d0', marginBottom:8, lineHeight:1.5},
+  duplicateMatch:{fontSize:11, color:'#8a8a74', lineHeight:1.5},
+  duplicateMatchMeta:{color:'#6b7260', fontSize:10},
+  historyDetails:{marginTop:10, fontSize:11},
+  historySummary:{color:'#6b7260', cursor:'pointer', fontSize:10,
+                  letterSpacing:'0.05em', marginBottom:6},
+  historyList:{listStyle:'none', paddingLeft:12, marginTop:8},
+  historyItem:{fontSize:10, color:'#6b7260', marginBottom:4, lineHeight:1.5},
 }

@@ -327,6 +327,31 @@ Resources:
             Path: /all-actions
             Method: GET
 
+  # ── LAMBDA: CHECK DUPLICATE ────────────────────────────────
+  CheckDuplicateFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: meetingmind-check-duplicate
+      CodeUri: functions/check-duplicate/
+      Handler: app.lambda_handler
+      Timeout: 30
+      MemorySize: 512
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref MeetingsTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - bedrock:InvokeModel
+              Resource: "*"
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref MeetingMindApi
+            Path: /check-duplicate
+            Method: POST
+
   # ── LAMBDA: SEND REMINDERS ─────────────────────────────────
   SendRemindersFunction:
     Type: AWS::Serverless::Function

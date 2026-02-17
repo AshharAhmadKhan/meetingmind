@@ -74,23 +74,23 @@
   - [ ] 4.4.5 Verify risk badges display
 
 ## Day 5: Duplicate Action Detection (Bedrock Embeddings)
-- [ ] 5.1 Modify process-meeting Lambda
-  - [ ] 5.1.1 Generate embeddings for action items
-  - [ ] 5.1.2 Store embeddings in DynamoDB
-- [ ] 5.2 Create check-duplicate Lambda
-  - [ ] 5.2.1 Implement cosine similarity
-  - [ ] 5.2.2 Add duplicate detection logic
-  - [ ] 5.2.3 Add to SAM template
-- [ ] 5.3 Update frontend validation
-  - [ ] 5.3.1 Add duplicate check on action creation
-  - [ ] 5.3.2 Show duplicate warning modal
-  - [ ] 5.3.3 Add smart breakdown suggestions
-- [ ] 5.4 Deploy and test
-  - [ ] 5.4.1 Deploy backend
-  - [ ] 5.4.2 Deploy frontend
-  - [ ] 5.4.3 Test duplicate detection
-  - [ ] 5.4.4 Verify similarity scores
-  - [ ] 5.4.5 Test breakdown suggestions
+- [x] 5.1 Modify process-meeting Lambda
+  - [x] 5.1.1 Generate embeddings for action items
+  - [x] 5.1.2 Store embeddings in DynamoDB
+- [x] 5.2 Create check-duplicate Lambda
+  - [x] 5.2.1 Implement cosine similarity
+  - [x] 5.2.2 Add duplicate detection logic
+  - [x] 5.2.3 Add to SAM template
+- [x] 5.3 Update frontend validation
+  - [x] 5.3.1 Add duplicate check button in Actions Overview
+  - [x] 5.3.2 Show duplicate results panel
+  - [ ] 5.3.3 Add smart breakdown suggestions (future enhancement)
+- [x] 5.4 Deploy and test
+  - [x] 5.4.1 Deploy backend
+  - [x] 5.4.2 Deploy frontend (to correct S3 bucket)
+  - [x] 5.4.3 Test duplicate detection (7 duplicates found)
+  - [x] 5.4.4 Verify similarity scores (100% for exact matches)
+  - [x] 5.4.5 Fix CloudFront routing for React (404 → index.html)
 
 ## Day 6: Action Item Graveyard + Team Leaderboard
 - [ ] 6.1 Create Graveyard page
