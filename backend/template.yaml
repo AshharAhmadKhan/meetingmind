@@ -92,6 +92,24 @@ Resources:
           Projection:
             ProjectionType: ALL
 
+  # ── SQS QUEUES ─────────────────────────────────────────────
+  ProcessingDeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: meetingmind-processing-dlq
+      MessageRetentionPeriod: 1209600  # 14 days
+      VisibilityTimeout: 120  # 2 minutes (longer than DLQ handler timeout)
+
+  ProcessingQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: meetingmind-processing-queue
+      VisibilityTimeout: 960  # 16 minutes (longer than Lambda timeout)
+      MessageRetentionPeriod: 345600  # 4 days
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt ProcessingDeadLetterQueue.Arn
+        maxReceiveCount: 3  # Retry 3 times before DLQ
+
   # ── SNS TOPIC ──────────────────────────────────────────────
   ReminderTopic:
     Type: AWS::SNS::Topic
@@ -144,11 +162,16 @@ Resources:
       Handler: app.lambda_handler
       Timeout: 900
       MemorySize: 512
+      Environment:
+        Variables:
+          PROCESSING_QUEUE_URL: !Ref ProcessingQueue
       Policies:
         - S3CrudPolicy:
             BucketName: !Ref AudioBucket
         - DynamoDBCrudPolicy:
             TableName: !Ref MeetingsTable
+        - SQSPollerPolicy:
+            QueueName: !GetAtt ProcessingQueue.QueueName
         - Statement:
             - Effect: Allow
               Action:
@@ -164,18 +187,34 @@ Resources:
                 - ses:SendEmail
                 - ses:SendRawEmail
               Resource: "*"
+      Events:
+        SQSEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt ProcessingQueue.Arn
+            BatchSize: 1
+            Enabled: true
 
-  # ── PERMISSION: allow S3 to invoke ProcessMeeting ─────────
-  S3InvokeLambdaPermission:
-    Type: AWS::Lambda::Permission
-    DependsOn: ProcessMeetingFunction
+  # ── S3 TO SQS NOTIFICATION ─────────────────────────────────
+  # Allow S3 to send messages to SQS
+  SQSQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
     Properties:
-      FunctionName: !GetAtt ProcessMeetingFunction.Arn
-      Action: lambda:InvokeFunction
-      Principal: s3.amazonaws.com
-      SourceArn: !GetAtt AudioBucket.Arn
+      Queues:
+        - !Ref ProcessingQueue
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: s3.amazonaws.com
+            Action:
+              - sqs:SendMessage
+            Resource: !GetAtt ProcessingQueue.Arn
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !GetAtt AudioBucket.Arn
 
-  # ── CUSTOM RESOURCE: wire S3 notification AFTER both exist ─
+  # Custom resource to configure S3 → SQS notification
   S3NotificationSetupFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -187,15 +226,15 @@ Resources:
             print("Event:", json.dumps(event))
             s3 = boto3.client('s3')
             bucket  = event['ResourceProperties']['BucketName']
-            fn_arn  = event['ResourceProperties']['FunctionArn']
+            queue_arn = event['ResourceProperties']['QueueArn']
             req_type = event['RequestType']
             try:
                 if req_type in ('Create', 'Update'):
                     s3.put_bucket_notification_configuration(
                         Bucket=bucket,
                         NotificationConfiguration={
-                            'LambdaFunctionConfigurations': [{
-                                'LambdaFunctionArn': fn_arn,
+                            'QueueConfigurations': [{
+                                'QueueArn': queue_arn,
                                 'Events': ['s3:ObjectCreated:*'],
                                 'Filter': {'Key': {'FilterRules': [
                                     {'Name': 'prefix', 'Value': 'audio/'}
@@ -243,12 +282,12 @@ Resources:
     Type: AWS::CloudFormation::CustomResource
     DependsOn:
       - AudioBucket
-      - ProcessMeetingFunction
-      - S3InvokeLambdaPermission
+      - ProcessingQueue
+      - SQSQueuePolicy
     Properties:
       ServiceToken: !GetAtt S3NotificationSetupFunction.Arn
       BucketName:   !Ref AudioBucket
-      FunctionArn:  !GetAtt ProcessMeetingFunction.Arn
+      QueueArn:     !GetAtt ProcessingQueue.Arn
 
   # ── LAMBDA: LIST MEETINGS ──────────────────────────────────
   ListMeetingsFunction:
@@ -383,6 +422,30 @@ Resources:
           Properties:
             Schedule: cron(0 8 * * ? *)
             Description: Daily reminder at 8AM UTC
+
+  # ── LAMBDA: DLQ HANDLER ────────────────────────────────────
+  DLQHandlerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: meetingmind-dlq-handler
+      CodeUri: functions/dlq-handler/
+      Handler: app.lambda_handler
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref MeetingsTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ses:SendEmail
+                - ses:SendRawEmail
+              Resource: "*"
+      Events:
+        DLQEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt ProcessingDeadLetterQueue.Arn
+            BatchSize: 1
+            Enabled: true
 
   # ── CLOUDWATCH DASHBOARD ───────────────────────────────────
   MeetingMindDashboard:

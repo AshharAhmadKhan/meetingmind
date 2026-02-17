@@ -466,9 +466,20 @@ def lambda_handler(event, context):
     user_id = meeting_id = None
 
     try:
-        # Parse S3 event
-        with xray_recorder.capture('parse_s3_event'):
-            record     = event['Records'][0]['s3']
+        # Parse event - handle both SQS (new) and direct S3 (legacy)
+        with xray_recorder.capture('parse_event'):
+            # Check if event is from SQS
+            if 'Records' in event and event['Records'][0].get('eventSource') == 'aws:sqs':
+                # SQS event - extract S3 event from message body
+                sqs_record = event['Records'][0]
+                s3_event = json.loads(sqs_record['body'])
+                record = s3_event['Records'][0]['s3']
+                print("Processing from SQS queue")
+            else:
+                # Direct S3 event (legacy path)
+                record = event['Records'][0]['s3']
+                print("Processing from direct S3 event")
+            
             bucket     = record['bucket']['name']
             s3_key     = record['object']['key']
             filename   = s3_key.split('/')[-1]
