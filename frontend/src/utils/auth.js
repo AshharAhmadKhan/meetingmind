@@ -1,5 +1,5 @@
 import { Amplify } from 'aws-amplify'
-import { signIn, signOut, getCurrentUser, fetchAuthSession } from 'aws-amplify/auth'
+import { signIn, signOut, getCurrentUser, fetchAuthSession, signUp } from 'aws-amplify/auth'
 
 const cfg = (typeof window !== 'undefined' && window.__MM_CONFIG__) || {}
 const userPoolId       = cfg.userPoolId       || import.meta.env.VITE_USER_POOL_ID       || 'ap-south-1_PLACEHOLDER'
@@ -16,6 +16,16 @@ if (!userPoolId.includes('PLACEHOLDER')) {
 
 export async function login(email, password) {
   return await signIn({ username: email, password })
+}
+
+export async function signup(email, password) {
+  return await signUp({
+    username: email,
+    password,
+    options: {
+      userAttributes: { email }
+    }
+  })
 }
 
 export async function logout() {

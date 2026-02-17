@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { login, checkSession } from '../utils/auth.js'
+import { login, signup, checkSession } from '../utils/auth.js'
 
 export default function LoginPage() {
   const navigate  = useNavigate()
@@ -8,6 +8,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [error,    setError]    = useState('')
   const [loading,  setLoading]  = useState(false)
+  const [isSignup, setIsSignup] = useState(false)
+  const [signupSuccess, setSignupSuccess] = useState(false)
 
   useEffect(() => {
     checkSession().then(u => { if (u) navigate('/') })
@@ -18,11 +20,22 @@ export default function LoginPage() {
     setError('')
     setLoading(true)
     try {
-      await login(email, password)
-      await checkSession()
-      navigate('/')
+      if (isSignup) {
+        await signup(email, password)
+        setSignupSuccess(true)
+      } else {
+        await login(email, password)
+        await checkSession()
+        navigate('/')
+      }
     } catch (err) {
-      setError(err.message || 'Invalid credentials.')
+      if (err.name === 'UserNotConfirmedException') {
+        setError('Your account is pending approval. We will email you when approved.')
+      } else if (err.name === 'NotAuthorizedException') {
+        setError('Invalid credentials or account not approved yet.')
+      } else {
+        setError(err.message || (isSignup ? 'Signup failed.' : 'Invalid credentials.'))
+      }
     } finally {
       setLoading(false)
     }
@@ -122,8 +135,18 @@ export default function LoginPage() {
             <span style={s.logoRest}>eetingMind</span>
           </div>
 
-          <h2 style={s.formH}>Sign in</h2>
-          <p style={s.formSub}>Access your meeting workspace</p>
+          <h2 style={s.formH}>{isSignup ? 'Sign up' : 'Sign in'}</h2>
+          <p style={s.formSub}>{isSignup ? 'Create your meeting workspace' : 'Access your meeting workspace'}</p>
+
+          {signupSuccess && (
+            <div style={s.success}>
+              <div style={{fontSize:13, marginBottom:6}}>✓ Registration received!</div>
+              <div style={{fontSize:10, lineHeight:1.5}}>
+                Thank you for registering. We'll send you an email once your account is approved. 
+                This usually takes a few hours.
+              </div>
+            </div>
+          )}
 
           {error && <div style={s.err}>{error}</div>}
 
@@ -154,11 +177,25 @@ export default function LoginPage() {
               />
             </div>
 
-            <button type="submit" disabled={loading}
+            <button type="submit" disabled={loading || signupSuccess}
               className="submit-btn" style={s.btn}>
-              {loading ? 'Signing in…' : 'Sign in →'}
+              {loading ? (isSignup ? 'Creating account…' : 'Signing in…') : (isSignup ? 'Create account →' : 'Sign in →')}
             </button>
           </form>
+
+          {!signupSuccess && (
+            <div style={s.toggle}>
+              <span style={s.toggleText}>
+                {isSignup ? 'Already have an account?' : "Don't have an account?"}
+              </span>
+              <button 
+                onClick={() => { setIsSignup(!isSignup); setError(''); }}
+                style={s.toggleBtn}
+              >
+                {isSignup ? 'Sign in' : 'Sign up'}
+              </button>
+            </div>
+          )}
 
           <div style={s.trust}>
             <div style={s.trustRow}>
@@ -227,6 +264,9 @@ const s = {
   err:     {background:'#1e1010', border:'1px solid #4a2020',
             borderRadius:4, padding:'10px 12px', color:'#e88080',
             fontSize:11, marginBottom:20, letterSpacing:'0.03em'},
+  success: {background:'#101e10', border:'1px solid #204a20',
+            borderRadius:4, padding:'10px 12px', color:'#80e880',
+            fontSize:11, marginBottom:20, letterSpacing:'0.03em'},
   form:    {display:'flex', flexDirection:'column', gap:24},
   fGroup:  {display:'flex', flexDirection:'column', gap:8},
   label:   {fontSize:9, letterSpacing:'0.15em', color:'#8a8a74', textTransform:'uppercase'},
@@ -238,6 +278,11 @@ const s = {
             fontFamily:"'DM Mono',monospace", letterSpacing:'0.1em',
             textTransform:'uppercase', cursor:'pointer',
             transition:'background 0.2s', width:'100%'},
+  toggle:  {marginTop:24, display:'flex', alignItems:'center', justifyContent:'center', gap:8},
+  toggleText:{fontSize:11, color:'#6b7260'},
+  toggleBtn:{background:'none', border:'none', color:'#c8f04a', fontSize:11,
+             fontFamily:"'DM Mono',monospace", cursor:'pointer',
+             textDecoration:'underline', padding:0},
   trust:   {marginTop:36, paddingTop:24, borderTop:'1px solid #2a2a20',
             display:'flex', flexDirection:'column', gap:10},
   trustRow:{display:'flex', alignItems:'flex-start', gap:10, fontSize:12},

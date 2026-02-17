@@ -552,6 +552,49 @@ Resources:
             Schedule: cron(0 3 * * ? *)
             Description: Daily digest at 9AM IST (3AM UTC)
 
+  # ── LAMBDA: PRE-SIGNUP ─────────────────────────────────────
+  PreSignupFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: meetingmind-pre-signup
+      CodeUri: functions/pre-signup/
+      Handler: app.lambda_handler
+      Timeout: 10
+
+  # ── LAMBDA: POST-CONFIRMATION ──────────────────────────────
+  PostConfirmationFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: meetingmind-post-confirmation
+      CodeUri: functions/post-confirmation/
+      Handler: app.lambda_handler
+      Timeout: 10
+      Environment:
+        Variables:
+          USER_POOL_ID: !Ref MeetingMindUserPool
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - cognito-idp:AdminDisableUser
+              Resource: !GetAtt MeetingMindUserPool.Arn
+
+  # ── LAMBDA: SEND WELCOME EMAIL ─────────────────────────────
+  SendWelcomeEmailFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: meetingmind-send-welcome-email
+      CodeUri: functions/send-welcome-email/
+      Handler: app.lambda_handler
+      Timeout: 30
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ses:SendEmail
+                - ses:SendRawEmail
+              Resource: "*"
+
   # ── LAMBDA: DLQ HANDLER ────────────────────────────────────
   DLQHandlerFunction:
     Type: AWS::Serverless::Function
