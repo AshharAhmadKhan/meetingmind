@@ -93,18 +93,18 @@
   - [x] 5.4.5 Fix CloudFront routing for React (404 → index.html)
 
 ## Day 6: Action Item Graveyard + Team Leaderboard
-- [ ] 6.1 Create Graveyard page
-  - [ ] 6.1.1 Create Graveyard.jsx component
-  - [ ] 6.1.2 Add tombstone visualization
-  - [ ] 6.1.3 Add resurrection functionality
-  - [ ] 6.1.4 Add route to App.jsx
-- [ ] 6.2 Create Leaderboard component
-  - [ ] 6.2.1 Calculate per-person stats
-  - [ ] 6.2.2 Add ranking logic
-  - [ ] 6.2.3 Add achievements
-  - [ ] 6.2.4 Add to Dashboard
-- [ ] 6.3 Deploy and test
-  - [ ] 6.3.1 Deploy frontend
+- [x] 6.1 Create Graveyard page
+  - [x] 6.1.1 Create Graveyard.jsx component
+  - [x] 6.1.2 Add tombstone visualization
+  - [x] 6.1.3 Add resurrection functionality
+  - [x] 6.1.4 Add route to App.jsx
+- [x] 6.2 Create Leaderboard component
+  - [x] 6.2.1 Calculate per-person stats
+  - [x] 6.2.2 Add ranking logic
+  - [x] 6.2.3 Add achievements
+  - [x] 6.2.4 Add to Dashboard
+- [x] 6.3 Deploy and test
+  - [x] 6.3.1 Deploy frontend
   - [ ] 6.3.2 Test graveyard display
   - [ ] 6.3.3 Test resurrection
   - [ ] 6.3.4 Test leaderboard rankings

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { logout, checkSession } from '../utils/auth.js'
 import { listMeetings, getUploadUrl, uploadAudioToS3 } from '../utils/api.js'
+import Leaderboard from '../components/Leaderboard.jsx'
 
 const STATUS = {
   PENDING:      { label: 'Pending',      color: '#8a8a74' },
@@ -173,6 +174,9 @@ export default function Dashboard() {
                   <button onClick={() => navigate('/actions')} style={s.actionsBtn}>
                     ✓ All Actions
                   </button>
+                  <button onClick={() => navigate('/graveyard')} style={s.graveyardBtn}>
+                    🪦 Graveyard
+                  </button>
                   <button onClick={() => navigate('/debt')} style={s.debtBtn}>
                     💰 View Debt
                   </button>
@@ -224,6 +228,9 @@ export default function Dashboard() {
               })}
             </ul>
           )}
+
+          {/* Leaderboard */}
+          {!loading && meetings.length > 0 && <Leaderboard />}
         </section>
 
         <section style={s.right}>
@@ -383,6 +390,10 @@ const s = {
               padding:'6px 14px', color:'#0c0c09', fontSize:11, letterSpacing:'0.05em',
               cursor:'pointer', fontFamily:"'DM Mono',monospace", fontWeight:400,
               transition:'opacity 0.15s'},
+  graveyardBtn:{background:'#8a8a74', border:'none', borderRadius:4,
+                padding:'6px 14px', color:'#0c0c09', fontSize:11, letterSpacing:'0.05em',
+                cursor:'pointer', fontFamily:"'DM Mono',monospace", fontWeight:400,
+                transition:'opacity 0.15s'},
   debtBtn:{background:'#c8f04a', border:'none', borderRadius:4,
            padding:'6px 14px', color:'#0c0c09', fontSize:11, letterSpacing:'0.05em',
            cursor:'pointer', fontFamily:"'DM Mono',monospace", fontWeight:400,
