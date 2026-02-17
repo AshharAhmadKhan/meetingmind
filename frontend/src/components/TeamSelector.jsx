@@ -63,14 +63,14 @@ export default function TeamSelector({ selectedTeamId, onTeamChange }) {
     }
   }
 
-  if (loading) return <div className="text-gray-400">Loading teams...</div>
+  if (loading) return <div style={s.loading}>Loading teams...</div>
 
   return (
-    <div className="flex items-center gap-3">
+    <div style={s.root}>
       <select
         value={selectedTeamId || ''}
         onChange={(e) => onTeamChange(e.target.value || null)}
-        className="bg-gray-800 text-white px-4 py-2 rounded-lg border border-gray-700 focus:border-blue-500 focus:outline-none"
+        style={s.select}
       >
         <option value="">Personal (Just Me)</option>
         {teams.map(team => (
@@ -80,38 +80,29 @@ export default function TeamSelector({ selectedTeamId, onTeamChange }) {
         ))}
       </select>
 
-      <button
-        onClick={() => setShowCreateModal(true)}
-        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition"
-      >
+      <button onClick={() => setShowCreateModal(true)} style={s.createBtn}>
         Create Team
       </button>
 
-      <button
-        onClick={() => setShowJoinModal(true)}
-        className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition"
-      >
+      <button onClick={() => setShowJoinModal(true)} style={s.joinBtn}>
         Join Team
       </button>
 
       {/* Create Team Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-gray-800 p-6 rounded-lg max-w-md w-full">
-            <h3 className="text-xl font-bold mb-4">Create New Team</h3>
-            {error && <div className="text-red-500 mb-3">{error}</div>}
+        <div style={s.modalOverlay}>
+          <div style={s.modal}>
+            <h3 style={s.modalTitle}>Create New Team</h3>
+            {error && <div style={s.error}>{error}</div>}
             <input
               type="text"
               value={newTeamName}
               onChange={(e) => setNewTeamName(e.target.value)}
               placeholder="Team name"
-              className="w-full bg-gray-700 text-white px-4 py-2 rounded-lg mb-4"
+              style={s.input}
             />
-            <div className="flex gap-3">
-              <button
-                onClick={handleCreateTeam}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg"
-              >
+            <div style={s.modalButtons}>
+              <button onClick={handleCreateTeam} style={s.modalCreateBtn}>
                 Create
               </button>
               <button
@@ -120,7 +111,7 @@ export default function TeamSelector({ selectedTeamId, onTeamChange }) {
                   setNewTeamName('')
                   setError('')
                 }}
-                className="flex-1 bg-gray-600 hover:bg-gray-700 text-white py-2 rounded-lg"
+                style={s.modalCancelBtn}
               >
                 Cancel
               </button>
@@ -131,23 +122,20 @@ export default function TeamSelector({ selectedTeamId, onTeamChange }) {
 
       {/* Join Team Modal */}
       {showJoinModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-gray-800 p-6 rounded-lg max-w-md w-full">
-            <h3 className="text-xl font-bold mb-4">Join Team</h3>
-            {error && <div className="text-red-500 mb-3">{error}</div>}
+        <div style={s.modalOverlay}>
+          <div style={s.modal}>
+            <h3 style={s.modalTitle}>Join Team</h3>
+            {error && <div style={s.error}>{error}</div>}
             <input
               type="text"
               value={inviteCode}
               onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
               placeholder="Invite code (e.g., ABC123)"
-              className="w-full bg-gray-700 text-white px-4 py-2 rounded-lg mb-4"
+              style={s.input}
               maxLength={6}
             />
-            <div className="flex gap-3">
-              <button
-                onClick={handleJoinTeam}
-                className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg"
-              >
+            <div style={s.modalButtons}>
+              <button onClick={handleJoinTeam} style={s.modalJoinBtn}>
                 Join
               </button>
               <button
@@ -156,7 +144,7 @@ export default function TeamSelector({ selectedTeamId, onTeamChange }) {
                   setInviteCode('')
                   setError('')
                 }}
-                className="flex-1 bg-gray-600 hover:bg-gray-700 text-white py-2 rounded-lg"
+                style={s.modalCancelBtn}
               >
                 Cancel
               </button>
@@ -166,4 +154,147 @@ export default function TeamSelector({ selectedTeamId, onTeamChange }) {
       )}
     </div>
   )
+}
+
+const s = {
+  root: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 12,
+    padding: '16px 20px',
+    background: '#111108',
+    border: '1px solid #2a2a20',
+    borderRadius: 8,
+  },
+  loading: {
+    fontSize: 11,
+    color: '#6b7260',
+    padding: '16px 20px',
+  },
+  select: {
+    background: '#1e1e16',
+    border: '1px solid #3a3a2e',
+    borderRadius: 4,
+    padding: '8px 12px',
+    color: '#f0ece0',
+    fontSize: 12,
+    fontFamily: "'DM Mono',monospace",
+    cursor: 'pointer',
+    outline: 'none',
+    flex: 1,
+  },
+  createBtn: {
+    background: '#6a9ae8',
+    border: 'none',
+    borderRadius: 4,
+    padding: '8px 14px',
+    color: '#0c0c09',
+    fontSize: 11,
+    letterSpacing: '0.05em',
+    cursor: 'pointer',
+    fontFamily: "'DM Mono',monospace",
+    fontWeight: 400,
+    transition: 'opacity 0.15s',
+  },
+  joinBtn: {
+    background: '#c8f04a',
+    border: 'none',
+    borderRadius: 4,
+    padding: '8px 14px',
+    color: '#0c0c09',
+    fontSize: 11,
+    letterSpacing: '0.05em',
+    cursor: 'pointer',
+    fontFamily: "'DM Mono',monospace",
+    fontWeight: 400,
+    transition: 'opacity 0.15s',
+  },
+  modalOverlay: {
+    position: 'fixed',
+    inset: 0,
+    background: 'rgba(0,0,0,0.7)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1000,
+  },
+  modal: {
+    background: '#111108',
+    border: '1px solid #3a3a2e',
+    borderRadius: 8,
+    padding: '24px',
+    maxWidth: 400,
+    width: '90%',
+  },
+  modalTitle: {
+    fontFamily: "'Playfair Display',serif",
+    fontSize: 18,
+    fontWeight: 700,
+    color: '#f0ece0',
+    marginBottom: 16,
+  },
+  error: {
+    background: '#1a0e0e',
+    border: '1px solid #4a2a2a',
+    borderRadius: 4,
+    padding: '8px 12px',
+    color: '#e87a6a',
+    fontSize: 11,
+    marginBottom: 12,
+  },
+  input: {
+    width: '100%',
+    background: '#1e1e16',
+    border: '1px solid #3a3a2e',
+    borderRadius: 4,
+    padding: '10px 12px',
+    color: '#f0ece0',
+    fontSize: 13,
+    fontFamily: "'DM Mono',monospace",
+    marginBottom: 16,
+    outline: 'none',
+  },
+  modalButtons: {
+    display: 'flex',
+    gap: 12,
+  },
+  modalCreateBtn: {
+    flex: 1,
+    background: '#6a9ae8',
+    border: 'none',
+    borderRadius: 4,
+    padding: '10px',
+    color: '#0c0c09',
+    fontSize: 12,
+    letterSpacing: '0.05em',
+    cursor: 'pointer',
+    fontFamily: "'DM Mono',monospace",
+    fontWeight: 400,
+  },
+  modalJoinBtn: {
+    flex: 1,
+    background: '#c8f04a',
+    border: 'none',
+    borderRadius: 4,
+    padding: '10px',
+    color: '#0c0c09',
+    fontSize: 12,
+    letterSpacing: '0.05em',
+    cursor: 'pointer',
+    fontFamily: "'DM Mono',monospace",
+    fontWeight: 400,
+  },
+  modalCancelBtn: {
+    flex: 1,
+    background: '#2a2a20',
+    border: '1px solid #3a3a2e',
+    borderRadius: 4,
+    padding: '10px',
+    color: '#8a8a74',
+    fontSize: 12,
+    letterSpacing: '0.05em',
+    cursor: 'pointer',
+    fontFamily: "'DM Mono',monospace",
+    fontWeight: 400,
+  },
 }
