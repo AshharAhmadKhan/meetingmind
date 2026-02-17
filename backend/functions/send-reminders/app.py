@@ -16,9 +16,10 @@ def lambda_handler(event, context):
     today   = datetime.now(timezone.utc).date()
     soon    = today + timedelta(days=2)   # Remind 2 days before deadline
 
-    # Scan all DONE meetings (for an MVP this is fine)
-    response = table.scan(
-        FilterExpression='#st = :done',
+    # Query using GSI instead of scan (efficient!)
+    response = table.query(
+        IndexName='status-createdAt-index',
+        KeyConditionExpression='#st = :done',
         ExpressionAttributeNames={'#st': 'status'},
         ExpressionAttributeValues={':done': 'DONE'}
     )

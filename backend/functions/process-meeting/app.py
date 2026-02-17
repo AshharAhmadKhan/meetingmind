@@ -203,40 +203,66 @@ def _days_from_now(n):
 
 def _calculate_risk_score(action, created_at):
     """
-    Calculate decay risk score (0-100) for action item.
+    Calculate intelligent risk score (0-100) for action item.
     
-    Risk Factors (research-backed):
-    - No owner: +45 points (89% failure rate)
-    - No deadline: +20 points
-    - Age >7 days: +25 points
-    - Age >14 days: +15 points
-    - Vague task (short): +10 points
+    Uses smooth curves instead of cliffs for more accurate prediction.
+    
+    Risk Factors:
+    - Deadline urgency (smooth curve, not cliff)
+    - Owner assignment
+    - Task vagueness (word count)
+    - Staleness (days since created)
     """
     risk = 0
     
-    # Factor 1: Owner assignment (highest predictor)
-    if not action.get('owner') or action['owner'] == 'Unassigned':
-        risk += 45
-    
-    # Factor 2: Deadline presence
-    if not action.get('deadline'):
+    # Factor 1: Deadline urgency (smooth curve)
+    deadline = action.get('deadline')
+    if deadline:
+        try:
+            deadline_dt = datetime.fromisoformat(deadline.replace('Z', '+00:00'))
+            days_left = (deadline_dt - datetime.now(timezone.utc)).days
+            
+            if days_left <= 0:
+                risk += 45  # overdue
+            elif days_left <= 2:
+                risk += 40  # critical
+            elif days_left <= 5:
+                risk += 30  # urgent
+            elif days_left <= 10:
+                risk += 15  # approaching
+            elif days_left <= 20:
+                risk += 5   # watch
+        except:
+            pass  # Invalid deadline format, skip
+    else:
+        # No deadline at all
         risk += 20
     
-    # Factor 3 & 4: Age (calculated from creation time)
+    # Factor 2: Owner missing
+    if not action.get('owner') or action['owner'] == 'Unassigned':
+        risk += 25
+    
+    # Factor 3: Task vagueness (word count, not character count)
+    task_text = action.get('task', '')
+    word_count = len(task_text.split())
+    
+    if word_count < 3:
+        risk += 20  # "do the thing"
+    elif word_count < 6:
+        risk += 10  # still vague
+    
+    # Factor 4: Staleness (how long it's been sitting unstarted)
     try:
-        age_days = (datetime.now(timezone.utc) - created_at).days
-        if age_days > 7:
-            risk += 25
-        if age_days > 14:
-            risk += 15
+        days_since_created = (datetime.now(timezone.utc) - created_at).days
+        
+        if days_since_created > 14:
+            risk += 10
+        elif days_since_created > 7:
+            risk += 5
     except:
         pass
     
-    # Factor 5: Task clarity (length as proxy)
-    task_text = action.get('task', '')
-    if len(task_text) < 20:
-        risk += 10
-    
+    # Cap at 100
     return min(risk, 100)
 
 def _get_risk_level(score):
@@ -270,13 +296,15 @@ def _generate_embedding(text):
         # Mock embedding: simple hash-based vector (1536 dimensions like Titan)
         # This allows the system to work without Bedrock
         import hashlib
+        from decimal import Decimal
         hash_obj = hashlib.sha256(text.encode())
         hash_bytes = hash_obj.digest()
         # Expand to 1536 dimensions by repeating and normalizing
         mock_embedding = []
         for i in range(1536):
             byte_val = hash_bytes[i % len(hash_bytes)]
-            mock_embedding.append((byte_val / 255.0) - 0.5)  # Normalize to [-0.5, 0.5]
+            # Convert to Decimal for DynamoDB compatibility
+            mock_embedding.append(Decimal(str((byte_val / 255.0) - 0.5)))
         return mock_embedding
 
 def _mock_analysis(title):

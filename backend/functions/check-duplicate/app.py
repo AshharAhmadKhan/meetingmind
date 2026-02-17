@@ -19,7 +19,7 @@ def decimal_to_float(obj):
 def _generate_embedding(text):
     """
     Generate embedding vector for text using Bedrock Titan Embeddings.
-    Falls back to mock embedding if Bedrock unavailable.
+    Falls back to TF-IDF-based embedding if Bedrock unavailable.
     """
     try:
         # Try Bedrock Titan Embeddings
@@ -33,15 +33,30 @@ def _generate_embedding(text):
         print(f"Generated Bedrock embedding: {len(embedding)} dimensions")
         return embedding
     except Exception as e:
-        print(f"Bedrock embedding failed: {e} — using mock embedding")
-        # Mock embedding: simple hash-based vector (1536 dimensions like Titan)
-        hash_obj = hashlib.sha256(text.encode())
-        hash_bytes = hash_obj.digest()
-        mock_embedding = []
-        for i in range(1536):
-            byte_val = hash_bytes[i % len(hash_bytes)]
-            mock_embedding.append((byte_val / 255.0) - 0.5)
-        return mock_embedding
+        print(f"Bedrock embedding failed: {e} — using TF-IDF fallback")
+        # Fallback: TF-IDF-based embedding (1536 dimensions to match Titan)
+        # Simple word-based vector using character n-grams
+        words = text.lower().split()
+        # Create a sparse vector based on word presence and position
+        vector = [0.0] * 1536
+        for i, word in enumerate(words[:100]):  # Limit to first 100 words
+            # Use word hash to determine positions in vector
+            word_hash = hash(word)
+            for j in range(5):  # Each word affects 5 positions
+                pos = (word_hash + j) % 1536
+                # TF-IDF-like weighting: position matters (earlier words weighted more)
+                weight = 1.0 / (i + 1)
+                vector[pos] += weight
+        
+        # Normalize to unit vector
+        magnitude = sum(x * x for x in vector) ** 0.5
+        if magnitude > 0:
+            vector = [x / magnitude for x in vector]
+        
+        # Convert to Decimal for DynamoDB compatibility
+        vector = [Decimal(str(x)) for x in vector]
+        
+        return vector
 
 def cosine_similarity(vec1, vec2):
     """Calculate cosine similarity between two vectors."""

@@ -73,11 +73,24 @@ Resources:
           AttributeType: S
         - AttributeName: meetingId
           AttributeType: S
+        - AttributeName: status
+          AttributeType: S
+        - AttributeName: createdAt
+          AttributeType: S
       KeySchema:
         - AttributeName: userId
           KeyType: HASH
         - AttributeName: meetingId
           KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: status-createdAt-index
+          KeySchema:
+            - AttributeName: status
+              KeyType: HASH
+            - AttributeName: createdAt
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
 
   # ── SNS TOPIC ──────────────────────────────────────────────
   ReminderTopic:
