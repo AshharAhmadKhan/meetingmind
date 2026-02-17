@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { logout, checkSession } from '../utils/auth.js'
 import { listMeetings, getUploadUrl, uploadAudioToS3 } from '../utils/api.js'
 import Leaderboard from '../components/Leaderboard.jsx'
+import PatternCards from '../components/PatternCards.jsx'
 
 const STATUS = {
   PENDING:      { label: 'Pending',      color: '#8a8a74' },
@@ -231,6 +232,9 @@ export default function Dashboard() {
 
           {/* Leaderboard */}
           {!loading && meetings.length > 0 && <Leaderboard />}
+
+          {/* Pattern Detection */}
+          {!loading && meetings.length > 0 && <PatternCards meetings={meetings} />}
         </section>
 
         <section style={s.right}>
@@ -350,6 +354,8 @@ const css = `
   input:focus{outline:none;border-color:#c8f04a !important;}
   .signout:hover{color:#f0ece0 !important;border-color:#6b7260 !important;}
   .pipestep{animation:fadeUp 0.4s ease both;}
+  .patterncard{animation:fadeUp 0.3s ease both;}
+  .patterncard:hover{border-color:#c8f04a !important;}
 `
 
 const s = {
