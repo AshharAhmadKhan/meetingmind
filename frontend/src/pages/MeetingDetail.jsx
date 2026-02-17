@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { checkSession } from '../utils/auth.js'
 import { getMeeting, updateAction } from '../utils/api.js'
 import {
-  PieChart, Pie, ResponsiveContainer,
+  PieChart, Pie, Cell, ResponsiveContainer,
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine
 } from 'recharts'
 
@@ -332,7 +332,11 @@ export default function MeetingDetail() {
                 startAngle={90} 
                 endAngle={-270} 
                 stroke="none"
-              />
+              >
+                {SPEAKERS.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.color} />
+                ))}
+              </Pie>
             </PieChart>
             <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
               {SPEAKERS.map(sp => (
