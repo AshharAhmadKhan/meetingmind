@@ -5,3 +5,6 @@ __pycache__/
 .aws-sam/
 samconfig.toml
 *.zip
+
+# Session logs and diagnostic files
+docs/session-logs/
