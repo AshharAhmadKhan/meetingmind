@@ -46,3 +46,9 @@ export async function updateAction(meetingId, actionId, completed) {
   )
   return res.data
 }
+
+export async function getDebtAnalytics() {
+  const headers = await authHeaders()
+  const res = await axios.get(`${BASE}/debt-analytics`, { headers })
+  return res.data
+}

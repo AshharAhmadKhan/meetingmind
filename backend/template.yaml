@@ -49,7 +49,7 @@ Resources:
   AudioBucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Sub "meetingmind-audio-${AWS::AccountId}"
+      BucketName: meetingmind-audio-707411439284
       CorsConfiguration:
         CorsRules:
           - AllowedOrigins: ["*"]
@@ -133,7 +133,7 @@ Resources:
       MemorySize: 512
       Policies:
         - S3CrudPolicy:
-            BucketName: !Sub "meetingmind-audio-${AWS::AccountId}"
+            BucketName: !Ref AudioBucket
         - DynamoDBCrudPolicy:
             TableName: !Ref MeetingsTable
         - Statement:
@@ -160,7 +160,7 @@ Resources:
       FunctionName: !GetAtt ProcessMeetingFunction.Arn
       Action: lambda:InvokeFunction
       Principal: s3.amazonaws.com
-      SourceArn: !Sub "arn:aws:s3:::meetingmind-audio-${AWS::AccountId}"
+      SourceArn: !GetAtt AudioBucket.Arn
 
   # ── CUSTOM RESOURCE: wire S3 notification AFTER both exist ─
   S3NotificationSetupFunction:
@@ -224,7 +224,7 @@ Resources:
         - Statement:
             - Effect: Allow
               Action: s3:PutBucketNotification
-              Resource: !Sub "arn:aws:s3:::meetingmind-audio-${AWS::AccountId}"
+              Resource: !GetAtt AudioBucket.Arn
 
   S3NotificationSetup:
     Type: AWS::CloudFormation::CustomResource
@@ -290,6 +290,24 @@ Resources:
             RestApiId: !Ref MeetingMindApi
             Path: /meetings/{meetingId}/actions/{actionId}
             Method: PUT
+
+  # ── LAMBDA: GET DEBT ANALYTICS ─────────────────────────────
+  GetDebtAnalyticsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: meetingmind-get-debt-analytics
+      CodeUri: functions/get-debt-analytics/
+      Handler: app.lambda_handler
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref MeetingsTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref MeetingMindApi
+            Path: /debt-analytics
+            Method: GET
 
   # ── LAMBDA: SEND REMINDERS ─────────────────────────────────
   SendRemindersFunction:

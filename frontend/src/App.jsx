@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import LoginPage     from './pages/LoginPage.jsx'
 import Dashboard     from './pages/Dashboard.jsx'
 import MeetingDetail from './pages/MeetingDetail.jsx'
+import DebtDashboard from './pages/DebtDashboard.jsx'
 import { getUser }   from './utils/auth.js'
 
 function ProtectedRoute({ children }) {
@@ -20,6 +21,9 @@ export default function App() {
         }/>
         <Route path="/meeting/:meetingId" element={
           <ProtectedRoute><MeetingDetail /></ProtectedRoute>
+        }/>
+        <Route path="/debt" element={
+          <ProtectedRoute><DebtDashboard /></ProtectedRoute>
         }/>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
