@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { logout, checkSession } from '../utils/auth.js'
 import { getDebtAnalytics } from '../utils/api.js'
+import TeamSelector from '../components/TeamSelector.jsx'
 
 function CountUp({ target, duration = 1500 }) {
   const [count, setCount] = useState(0)
@@ -119,6 +120,7 @@ export default function DebtDashboard() {
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
+  const [selectedTeamId, setSelectedTeamId] = useState(null)
 
   useEffect(() => {
     checkSession().then(u => {
@@ -126,11 +128,11 @@ export default function DebtDashboard() {
       setUser(u.signInDetails?.loginId || '')
       fetchData()
     })
-  }, [])
+  }, [selectedTeamId])
 
   async function fetchData() {
     try {
-      const analytics = await getDebtAnalytics()
+      const analytics = await getDebtAnalytics(selectedTeamId)
       setData(analytics)
     } catch (e) {
       setError(e.response?.data?.error || e.message || 'Failed to load analytics')
@@ -163,6 +165,14 @@ export default function DebtDashboard() {
       </header>
 
       <main style={s.main}>
+        {/* Team Selector */}
+        <div style={{marginBottom: 24}}>
+          <TeamSelector 
+            selectedTeamId={selectedTeamId}
+            onTeamChange={setSelectedTeamId}
+          />
+        </div>
+
         {loading ? (
           <div style={s.center}>
             <div style={{...s.spin, animation:'spin 1s linear infinite'}}/>

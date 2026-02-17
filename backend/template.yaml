@@ -11,6 +11,7 @@ Globals:
     Environment:
       Variables:
         MEETINGS_TABLE: !Ref MeetingsTable
+        TEAMS_TABLE:    !Ref TeamsTable
         AUDIO_BUCKET:   !Ref AudioBucket
         REGION:         !Ref AWS::Region
         SNS_TOPIC_ARN:  !Ref ReminderTopic
@@ -77,6 +78,8 @@ Resources:
           AttributeType: S
         - AttributeName: createdAt
           AttributeType: S
+        - AttributeName: teamId
+          AttributeType: S
       KeySchema:
         - AttributeName: userId
           KeyType: HASH
@@ -89,6 +92,35 @@ Resources:
               KeyType: HASH
             - AttributeName: createdAt
               KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: teamId-createdAt-index
+          KeySchema:
+            - AttributeName: teamId
+              KeyType: HASH
+            - AttributeName: createdAt
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+
+  TeamsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: meetingmind-teams
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: teamId
+          AttributeType: S
+        - AttributeName: inviteCode
+          AttributeType: S
+      KeySchema:
+        - AttributeName: teamId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: inviteCode-index
+          KeySchema:
+            - AttributeName: inviteCode
+              KeyType: HASH
           Projection:
             ProjectionType: ALL
 
@@ -403,6 +435,78 @@ Resources:
             RestApiId: !Ref MeetingMindApi
             Path: /check-duplicate
             Method: POST
+
+  # ── LAMBDA: CREATE TEAM ────────────────────────────────────
+  CreateTeamFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: meetingmind-create-team
+      CodeUri: functions/create-team/
+      Handler: app.lambda_handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TeamsTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref MeetingMindApi
+            Path: /teams
+            Method: POST
+
+  # ── LAMBDA: JOIN TEAM ──────────────────────────────────────
+  JoinTeamFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: meetingmind-join-team
+      CodeUri: functions/join-team/
+      Handler: app.lambda_handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TeamsTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref MeetingMindApi
+            Path: /teams/join
+            Method: POST
+
+  # ── LAMBDA: GET TEAM ───────────────────────────────────────
+  GetTeamFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: meetingmind-get-team
+      CodeUri: functions/get-team/
+      Handler: app.lambda_handler
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref TeamsTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref MeetingMindApi
+            Path: /teams/{teamId}
+            Method: GET
+
+  # ── LAMBDA: LIST USER TEAMS ────────────────────────────────
+  ListUserTeamsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: meetingmind-list-user-teams
+      CodeUri: functions/list-user-teams/
+      Handler: app.lambda_handler
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref TeamsTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref MeetingMindApi
+            Path: /teams
+            Method: GET
 
   # ── LAMBDA: SEND REMINDERS ─────────────────────────────────
   SendRemindersFunction:

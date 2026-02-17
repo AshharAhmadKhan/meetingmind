@@ -79,18 +79,18 @@ function calculateStats(actions) {
   return leaderboard
 }
 
-export default function Leaderboard() {
+export default function Leaderboard({ teamId = null }) {
   const [leaderboard, setLeaderboard] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
   useEffect(() => {
     fetchLeaderboard()
-  }, [])
+  }, [teamId])
 
   async function fetchLeaderboard() {
     try {
-      const data = await getAllActions()
+      const data = await getAllActions(null, null, teamId)
       const actions = data.actions || []
       const stats = calculateStats(actions)
       setLeaderboard(stats)

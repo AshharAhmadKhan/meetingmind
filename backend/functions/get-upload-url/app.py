@@ -46,6 +46,7 @@ def lambda_handler(event, context):
         title    = body.get('title', 'Untitled Meeting').strip()
         content_type = body.get('contentType', 'audio/mpeg')
         file_size    = int(body.get('fileSize', 0))
+        team_id  = body.get('teamId')  # Optional team context
 
         ext = ALLOWED_TYPES.get(content_type)
         if not ext:
@@ -81,7 +82,7 @@ def lambda_handler(event, context):
 
         # Save to DynamoDB
         table = dynamodb.Table(os.environ['MEETINGS_TABLE'])
-        table.put_item(Item={
+        item = {
             'userId':    user_id,
             'meetingId': meeting_id,
             'title':     title,
@@ -89,7 +90,11 @@ def lambda_handler(event, context):
             's3Key':     s3_key,
             'createdAt': datetime.now(timezone.utc).isoformat(),
             'email':     claims.get('email', ''),
-        })
+        }
+        if team_id:
+            item['teamId'] = team_id
+        
+        table.put_item(Item=item)
 
         return {
             'statusCode': 200,

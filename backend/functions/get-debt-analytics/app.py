@@ -20,12 +20,26 @@ def lambda_handler(event, context):
         # Extract user ID from Cognito authorizer (same pattern as list-meetings)
         user_id = event['requestContext']['authorizer']['claims']['sub']
         
-        # Get all meetings for user
+        # Get query parameters for team filtering
+        params = event.get('queryStringParameters') or {}
+        team_id = params.get('teamId')  # optional team filter
+        
+        # Get all meetings for user or team
         table = dynamodb.Table(TABLE_NAME)
-        response = table.query(
-            KeyConditionExpression='userId = :uid',
-            ExpressionAttributeValues={':uid': user_id}
-        )
+        
+        if team_id:
+            # Query by teamId using GSI
+            response = table.query(
+                IndexName='teamId-createdAt-index',
+                KeyConditionExpression='teamId = :tid',
+                ExpressionAttributeValues={':tid': team_id}
+            )
+        else:
+            # Query by userId (personal meetings)
+            response = table.query(
+                KeyConditionExpression='userId = :uid',
+                ExpressionAttributeValues={':uid': user_id}
+            )
         
         meetings = response.get('Items', [])
         

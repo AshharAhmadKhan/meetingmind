@@ -4,6 +4,7 @@ import { logout, checkSession } from '../utils/auth.js'
 import { listMeetings, getUploadUrl, uploadAudioToS3 } from '../utils/api.js'
 import Leaderboard from '../components/Leaderboard.jsx'
 import PatternCards from '../components/PatternCards.jsx'
+import TeamSelector from '../components/TeamSelector.jsx'
 
 const STATUS = {
   PENDING:      { label: 'Pending',      color: '#8a8a74' },
@@ -89,6 +90,7 @@ export default function Dashboard() {
   const [error,     setError]     = useState('')
   const [uploadPct, setUploadPct] = useState(0)
   const [zoneHover, setZoneHover] = useState(false)
+  const [selectedTeamId, setSelectedTeamId] = useState(null)
 
   useEffect(() => {
     checkSession().then(u => {
@@ -112,7 +114,7 @@ export default function Dashboard() {
     setUploading(true); setUploadPct(0)
     setUploadMsg('Requesting upload slot…'); setError('')
     try {
-      const { uploadUrl } = await getUploadUrl(meetingTitle, file.type || 'audio/mpeg', file.size)
+      const { uploadUrl } = await getUploadUrl(meetingTitle, file.type || 'audio/mpeg', file.size, selectedTeamId)
       setUploadMsg('Uploading audio…'); setUploadPct(40)
       await uploadAudioToS3(uploadUrl, file)
       setUploadPct(100); setUploadMsg('✓ Upload complete — AI processing started')
@@ -159,6 +161,14 @@ export default function Dashboard() {
 
       <main style={s.main}>
         <section style={s.left}>
+          {/* Team Selector */}
+          <div style={{marginBottom: 24}}>
+            <TeamSelector 
+              selectedTeamId={selectedTeamId}
+              onTeamChange={setSelectedTeamId}
+            />
+          </div>
+
           <div style={s.secHead}>
             <div>
               <h2 style={s.secTitle}>Your Meetings</h2>
@@ -231,7 +241,7 @@ export default function Dashboard() {
           )}
 
           {/* Leaderboard */}
-          {!loading && meetings.length > 0 && <Leaderboard />}
+          {!loading && meetings.length > 0 && <Leaderboard teamId={selectedTeamId} />}
 
           {/* Pattern Detection */}
           {!loading && meetings.length > 0 && <PatternCards meetings={meetings} />}

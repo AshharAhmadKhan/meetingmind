@@ -28,13 +28,24 @@ def lambda_handler(event, context):
         params = event.get('queryStringParameters') or {}
         status_filter = params.get('status', 'all')  # all, incomplete, complete
         owner_filter = params.get('owner')  # filter by owner name
+        team_id = params.get('teamId')  # optional team filter
         
-        # Get all meetings for user
+        # Get all meetings for user or team
         table = dynamodb.Table(TABLE_NAME)
-        response = table.query(
-            KeyConditionExpression='userId = :uid',
-            ExpressionAttributeValues={':uid': user_id}
-        )
+        
+        if team_id:
+            # Query by teamId using GSI
+            response = table.query(
+                IndexName='teamId-createdAt-index',
+                KeyConditionExpression='teamId = :tid',
+                ExpressionAttributeValues={':tid': team_id}
+            )
+        else:
+            # Query by userId (personal meetings)
+            response = table.query(
+                KeyConditionExpression='userId = :uid',
+                ExpressionAttributeValues={':uid': user_id}
+            )
         
         meetings = response.get('Items', [])
         

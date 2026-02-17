@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { logout, checkSession } from '../utils/auth.js'
 import { getAllActions, checkDuplicate } from '../utils/api.js'
+import TeamSelector from '../components/TeamSelector.jsx'
 
 const RISK_COLORS = {
   LOW:      '#c8f04a',
@@ -36,6 +37,7 @@ export default function ActionsOverview() {
   const [ownerFilter, setOwnerFilter] = useState('')
   const [checkingDuplicates, setCheckingDuplicates] = useState(false)
   const [duplicateResults, setDuplicateResults] = useState(null)
+  const [selectedTeamId, setSelectedTeamId] = useState(null)
 
   useEffect(() => {
     checkSession().then(u => {
@@ -43,11 +45,11 @@ export default function ActionsOverview() {
       setUser(u.signInDetails?.loginId || '')
       fetchActions()
     })
-  }, [])
+  }, [selectedTeamId])
 
   async function fetchActions() {
     try {
-      const data = await getAllActions()
+      const data = await getAllActions(null, null, selectedTeamId)
       setActions(data.actions || [])
       setStats(data.stats || {})
     } catch (e) {
@@ -143,6 +145,14 @@ export default function ActionsOverview() {
       </header>
 
       <main style={s.main}>
+        {/* Team Selector */}
+        <div style={{marginBottom: 24}}>
+          <TeamSelector 
+            selectedTeamId={selectedTeamId}
+            onTeamChange={setSelectedTeamId}
+          />
+        </div>
+
         <div style={s.topBar}>
           <div>
             <h1 style={s.pageTitle}>Action Items from Meetings</h1>
