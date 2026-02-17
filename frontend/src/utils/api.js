@@ -52,3 +52,12 @@ export async function getDebtAnalytics() {
   const res = await axios.get(`${BASE}/debt-analytics`, { headers })
   return res.data
 }
+
+export async function getAllActions(status, owner) {
+  const headers = await authHeaders()
+  const params = {}
+  if (status) params.status = status
+  if (owner) params.owner = owner
+  const res = await axios.get(`${BASE}/all-actions`, { headers, params })
+  return res.data
+}

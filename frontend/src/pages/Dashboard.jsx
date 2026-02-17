@@ -169,9 +169,14 @@ export default function Dashboard() {
             </div>
             <div style={{display:'flex', alignItems:'center', gap:12}}>
               {meetings.length > 0 && (
-                <button onClick={() => navigate('/debt')} style={s.debtBtn}>
-                  💰 View Debt
-                </button>
+                <>
+                  <button onClick={() => navigate('/actions')} style={s.actionsBtn}>
+                    ✓ All Actions
+                  </button>
+                  <button onClick={() => navigate('/debt')} style={s.debtBtn}>
+                    💰 View Debt
+                  </button>
+                </>
               )}
               {meetings.length > 0 && <span style={s.bigCount}>{meetings.length}</span>}
             </div>
@@ -374,6 +379,10 @@ const s = {
             color:'#f0ece0', letterSpacing:'-0.3px', marginBottom:4},
   secSub:  {fontSize:10, letterSpacing:'0.1em', color:'#6b7260', textTransform:'uppercase'},
   bigCount:{fontFamily:"'Playfair Display',serif", fontSize:32, fontWeight:900, color:'#c8f04a'},
+  actionsBtn:{background:'#6a9ae8', border:'none', borderRadius:4,
+              padding:'6px 14px', color:'#0c0c09', fontSize:11, letterSpacing:'0.05em',
+              cursor:'pointer', fontFamily:"'DM Mono',monospace", fontWeight:400,
+              transition:'opacity 0.15s'},
   debtBtn:{background:'#c8f04a', border:'none', borderRadius:4,
            padding:'6px 14px', color:'#0c0c09', fontSize:11, letterSpacing:'0.05em',
            cursor:'pointer', fontFamily:"'DM Mono',monospace", fontWeight:400,

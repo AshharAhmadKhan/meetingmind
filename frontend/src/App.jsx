@@ -4,6 +4,7 @@ import LoginPage     from './pages/LoginPage.jsx'
 import Dashboard     from './pages/Dashboard.jsx'
 import MeetingDetail from './pages/MeetingDetail.jsx'
 import DebtDashboard from './pages/DebtDashboard.jsx'
+import ActionsOverview from './pages/ActionsOverview.jsx'
 import { getUser }   from './utils/auth.js'
 
 function ProtectedRoute({ children }) {
@@ -24,6 +25,9 @@ export default function App() {
         }/>
         <Route path="/debt" element={
           <ProtectedRoute><DebtDashboard /></ProtectedRoute>
+        }/>
+        <Route path="/actions" element={
+          <ProtectedRoute><ActionsOverview /></ProtectedRoute>
         }/>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

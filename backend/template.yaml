@@ -309,6 +309,24 @@ Resources:
             Path: /debt-analytics
             Method: GET
 
+  # ── LAMBDA: GET ALL ACTIONS ────────────────────────────────
+  GetAllActionsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: meetingmind-get-all-actions
+      CodeUri: functions/get-all-actions/
+      Handler: app.lambda_handler
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref MeetingsTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            RestApiId: !Ref MeetingMindApi
+            Path: /all-actions
+            Method: GET
+
   # ── LAMBDA: SEND REMINDERS ─────────────────────────────────
   SendRemindersFunction:
     Type: AWS::Serverless::Function
