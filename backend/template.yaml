@@ -527,6 +527,31 @@ Resources:
             Schedule: cron(0 8 * * ? *)
             Description: Daily reminder at 8AM UTC
 
+  # ── LAMBDA: DAILY DIGEST ───────────────────────────────────
+  DailyDigestFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: meetingmind-daily-digest
+      CodeUri: functions/daily-digest/
+      Handler: app.lambda_handler
+      Timeout: 300
+      MemorySize: 512
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref MeetingsTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ses:SendEmail
+                - ses:SendRawEmail
+              Resource: "*"
+      Events:
+        DailySchedule:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 3 * * ? *)
+            Description: Daily digest at 9AM IST (3AM UTC)
+
   # ── LAMBDA: DLQ HANDLER ────────────────────────────────────
   DLQHandlerFunction:
     Type: AWS::Serverless::Function
