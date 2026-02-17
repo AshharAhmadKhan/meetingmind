@@ -19,7 +19,7 @@ function CountUp({ target, duration = 1500 }) {
     }, 16)
     return () => clearInterval(timer)
   }, [target, duration])
-  return <>${count.toLocaleString()}</>
+  return <>{count.toLocaleString('en-US')}</>
 }
 
 function PieChart({ data }) {

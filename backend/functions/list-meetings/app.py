@@ -19,8 +19,8 @@ def lambda_handler(event, context):
     )
 
     meetings = response.get('Items', [])
-    # Sort newest first by createdAt
-    meetings.sort(key=lambda x: x.get('createdAt', ''), reverse=True)
+    # Sort newest first by createdAt (fallback to updatedAt for old meetings)
+    meetings.sort(key=lambda x: x.get('createdAt') or x.get('updatedAt', ''), reverse=True)
 
     return {
         'statusCode': 200,

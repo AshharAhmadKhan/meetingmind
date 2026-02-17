@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { checkSession } from '../utils/auth.js'
 import { getMeeting, updateAction } from '../utils/api.js'
 import {
-  PieChart, Pie, Cell, ResponsiveContainer,
+  PieChart, Pie, ResponsiveContainer,
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine
 } from 'recharts'
 
@@ -28,23 +28,71 @@ function dlInfo(dl) {
 }
 
 function getRiskBadge(action) {
+  // Use backend-calculated risk score if available
+  if (action.riskScore !== undefined) {
+    const score = action.riskScore
+    if (score >= 75) return { label: 'CRITICAL', score, color: '#e87a6a', bg: 'rgba(232,122,106,0.12)' }
+    if (score >= 50) return { label: 'HIGH RISK', score, color: '#e87a6a', bg: 'rgba(232,122,106,0.12)' }
+    if (score >= 25) return { label: 'MEDIUM RISK', score, color: '#e8c06a', bg: 'rgba(232,192,106,0.12)' }
+    return { label: 'LOW RISK', score, color: '#6ab4e8', bg: 'rgba(106,180,232,0.12)' }
+  }
+  
+  // Fallback to old logic for existing meetings
   const dl = dlInfo(action.deadline)
-  if (!action.owner || action.owner === 'Unassigned') return { label: 'HIGH RISK', color: '#e87a6a', bg: 'rgba(232,122,106,0.12)' }
-  if (!action.deadline) return { label: 'MEDIUM RISK', color: '#e8c06a', bg: 'rgba(232,192,106,0.12)' }
-  if (dl && dl.days < 0) return { label: 'OVERDUE', color: '#e87a6a', bg: 'rgba(232,122,106,0.12)' }
-  if (dl && dl.days <= 2) return { label: 'HIGH RISK', color: '#e87a6a', bg: 'rgba(232,122,106,0.12)' }
+  if (!action.owner || action.owner === 'Unassigned') return { label: 'HIGH RISK', score: 65, color: '#e87a6a', bg: 'rgba(232,122,106,0.12)' }
+  if (!action.deadline) return { label: 'MEDIUM RISK', score: 45, color: '#e8c06a', bg: 'rgba(232,192,106,0.12)' }
+  if (dl && dl.days < 0) return { label: 'OVERDUE', score: 85, color: '#e87a6a', bg: 'rgba(232,122,106,0.12)' }
+  if (dl && dl.days <= 2) return { label: 'HIGH RISK', score: 70, color: '#e87a6a', bg: 'rgba(232,122,106,0.12)' }
   return null
 }
 
+function getAgeBadge(createdAt) {
+  if (!createdAt) return null
+  const created = new Date(createdAt)
+  if (isNaN(created)) return null
+  
+  const days = Math.floor((new Date() - created) / 86400000)
+  if (days === 0) return { label: 'Today', color: '#6ab4e8' }
+  if (days === 1) return { label: '1 day old', color: '#8a8a74' }
+  if (days < 7) return { label: `${days} days old`, color: '#8a8a74' }
+  if (days < 14) return { label: `${Math.floor(days/7)} week old`, color: '#e8c06a' }
+  if (days < 30) return { label: `${Math.floor(days/7)} weeks old`, color: '#e8c06a' }
+  return { label: `${Math.floor(days/30)} month${Math.floor(days/30)>1?'s':''} old`, color: '#e87a6a' }
+}
+
 function calcHealthScore(actions, decisions) {
+  if (actions.length === 0 && decisions.length === 0) return 0
+  
   let score = 0
-  const hasDecisions = decisions.length >= 3 ? 3 : decisions.length
-  const allOwners = actions.length > 0 && actions.every(a => a.owner && a.owner !== 'Unassigned') ? 2 : 1
-  const allDeadlines = actions.length > 0 && actions.every(a => a.deadline) ? 2 : 1
-  const balanced = 2
-  const timebonus = 1
-  score = hasDecisions + allOwners + allDeadlines + balanced + timebonus
-  return Math.min(score, 10)
+  
+  // Decision quality (0-3 points) - more decisions = better meeting
+  const decisionPoints = Math.min(decisions.length, 3)
+  
+  // Action clarity (0-3 points) - clear ownership + deadlines
+  const clearActions = actions.filter(a => 
+    a.owner && a.owner !== 'Unassigned' && a.deadline
+  ).length
+  const clarityPoints = actions.length > 0 
+    ? (clearActions / actions.length) * 3 
+    : 0
+  
+  // Completion rate (0-2 points) - how many are done
+  const completed = actions.filter(a => a.completed).length
+  const completionPoints = actions.length > 0
+    ? (completed / actions.length) * 2
+    : 0
+  
+  // Risk distribution (0-2 points) - fewer high-risk items = better
+  const highRisk = actions.filter(a => {
+    const risk = getRiskBadge(a)
+    return risk && (risk.label === 'HIGH RISK' || risk.label === 'CRITICAL')
+  }).length
+  const riskPoints = actions.length > 0
+    ? (1 - (highRisk / actions.length)) * 2
+    : 0
+  
+  score = decisionPoints + clarityPoints + completionPoints + riskPoints
+  return Math.round(score * 10) / 10 // Round to 1 decimal
 }
 
 const SPEAKERS = [
@@ -113,11 +161,39 @@ export default function MeetingDetail() {
   const actions   = meeting.actionItems || []
   const decisions = meeting.decisions   || []
   const followUps = meeting.followUps   || []
+  const roi       = meeting.roi || null
   const done      = actions.filter(a => a.completed).length
   const pct       = actions.length ? Math.round(done/actions.length*100) : 0
   const dateStr   = fmtDate(meeting.createdAt || meeting.updatedAt)
   const health    = calcHealthScore(actions, decisions)
-  const atRisk    = actions.filter(a => getRiskBadge(a)).length
+  const atRisk    = actions.filter(a => {
+    const risk = getRiskBadge(a)
+    return risk && (risk.label === 'HIGH RISK' || risk.label === 'CRITICAL')
+  }).length
+
+  // Calculate real sub-scores
+  const clearActions = actions.filter(a => 
+    a.owner && a.owner !== 'Unassigned' && a.deadline
+  ).length
+  
+  const subScores = [
+    { 
+      l: 'Decision Clarity', 
+      v: Math.round(Math.min(decisions.length, 3) * 3.33 * 10) / 10
+    },
+    { 
+      l: 'Action Ownership', 
+      v: actions.length > 0 
+        ? Math.round((actions.filter(a => a.owner && a.owner !== 'Unassigned').length / actions.length) * 100) / 10
+        : 0
+    },
+    { 
+      l: 'Risk Management', 
+      v: actions.length > 0
+        ? Math.round((1 - (atRisk / actions.length)) * 100) / 10
+        : 10
+    },
+  ]
 
   const insights = [
     actions.some(a => !a.deadline)
@@ -160,16 +236,14 @@ export default function MeetingDetail() {
           <div style={s.healthCard}>
             <p style={s.healthLabel}>MEETING HEALTH</p>
             <div style={s.healthScoreRow}>
-              <span style={s.healthNum}>{health}.6</span>
+              <span style={s.healthNum}>{health}</span>
               <span style={s.healthDenom}>/10</span>
             </div>
-            <div style={s.healthDelta}>↑ +1.2 from last meeting</div>
+            <div style={s.healthDelta}>
+              {health >= 7 ? '✓ Strong meeting quality' : health >= 5 ? '⚠ Room for improvement' : '⚠ Needs attention'}
+            </div>
             <div style={s.healthSubScores}>
-              {[
-                { l: 'Decision Clarity', v: 9.1 },
-                { l: 'Participation',    v: 7.8 },
-                { l: 'Ownership',        v: 8.9 },
-              ].map(({ l, v }) => (
+              {subScores.map(({ l, v }) => (
                 <div key={l} style={s.subScore}>
                   <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
                     <span style={s.subLabel}>{l}</span>
@@ -183,6 +257,27 @@ export default function MeetingDetail() {
               ))}
             </div>
           </div>
+
+          {/* ROI CARD */}
+          {roi && (
+            <div style={s.roiCard}>
+              <p style={s.healthLabel}>MEETING ROI</p>
+              <div style={s.healthScoreRow}>
+                <span style={{...s.healthNum, color: roi.roi >= 0 ? '#c8f04a' : '#e87a6a'}}>
+                  {roi.roi >= 0 ? '+' : ''}{roi.roi}%
+                </span>
+              </div>
+              <div style={s.healthDelta}>
+                ${roi.value.toLocaleString('en-US')} value / ${roi.cost.toLocaleString('en-US')} cost
+              </div>
+              <div style={{...s.healthSubScores, marginTop:10}}>
+                <div style={{display:'flex', justifyContent:'space-between', fontSize:10, color:'#8a8a74'}}>
+                  <span>{roi.decision_count} decisions</span>
+                  <span>{roi.clear_action_count} clear actions</span>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div style={s.statsBox}>
             {[
@@ -228,10 +323,16 @@ export default function MeetingDetail() {
           <p style={s.chartLabel}>SPEAKING TIME</p>
           <div style={{ display:'flex', alignItems:'center', gap:24 }}>
             <PieChart width={120} height={120}>
-              <Pie data={SPEAKERS} dataKey="pct" innerRadius={36} outerRadius={56}
-                paddingAngle={3} startAngle={90} endAngle={-270} stroke="none">
-                {SPEAKERS.map((sp, i) => <Cell key={i} fill={sp.color} />)}
-              </Pie>
+              <Pie 
+                data={SPEAKERS} 
+                dataKey="pct" 
+                innerRadius={36} 
+                outerRadius={56}
+                paddingAngle={3} 
+                startAngle={90} 
+                endAngle={-270} 
+                stroke="none"
+              />
             </PieChart>
             <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
               {SPEAKERS.map(sp => (
@@ -314,6 +415,7 @@ export default function MeetingDetail() {
                 {actions.map((a,i) => {
                   const dl = dlInfo(a.deadline)
                   const risk = getRiskBadge(a)
+                  const age = getAgeBadge(a.createdAt)
                   return (
                     <li key={a.id} className="arow"
                       onClick={() => toggleAction(a.id, a.completed)}
@@ -336,10 +438,19 @@ export default function MeetingDetail() {
                             {dl.label}
                           </span>}
                           {risk && !a.completed && (
-                            <span style={{ fontSize:9, letterSpacing:'0.08em', color:risk.color,
+                            <span style={{ fontSize:10, letterSpacing:'0.08em', color:risk.color,
                               background:risk.bg, border:`1px solid ${risk.color}40`,
-                              borderRadius:3, padding:'2px 6px' }}>
+                              borderRadius:3, padding:'3px 8px', display:'flex', alignItems:'center', gap:5 }}>
+                              {typeof risk.score === 'number' && (
+                                <span style={{fontWeight:700, fontSize:11}}>{risk.score}</span>
+                              )}
                               {risk.label}
+                            </span>
+                          )}
+                          {age && !a.completed && (
+                            <span style={{ fontSize:9, letterSpacing:'0.06em', color:age.color,
+                              opacity:0.7 }}>
+                              ⏱ {age.label}
                             </span>
                           )}
                         </div>
@@ -447,6 +558,8 @@ const s = {
   summary: { fontSize:13, color:'#8a8a74', lineHeight:1.75, letterSpacing:'0.02em', maxWidth:520 },
 
   healthCard:  { background:'#141410', border:'1px solid #2e2e22', borderRadius:8,
+                 padding:'18px 22px', flexShrink:0, minWidth:200 },
+  roiCard:     { background:'#141410', border:'1px solid #2e2e22', borderRadius:8,
                  padding:'18px 22px', flexShrink:0, minWidth:200 },
   healthLabel: { fontSize:9, letterSpacing:'0.16em', color:'#555548', textTransform:'uppercase', marginBottom:10 },
   healthScoreRow: { display:'flex', alignItems:'flex-end', gap:4, marginBottom:6 },
