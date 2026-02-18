@@ -552,6 +552,7 @@ def lambda_handler(event, context):
                 'owner':     a.get('owner', 'Unassigned'),
                 'deadline':  a.get('deadline') if a.get('deadline') not in (None,'null','None','') else None,
                 'completed': False,
+                'status':    'todo',  # Initialize with todo status
                 'createdAt': created_at.isoformat()
             }
             

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { logout, checkSession } from '../utils/auth.js'
-import { getAllActions, checkDuplicate } from '../utils/api.js'
+import { getAllActions, checkDuplicate, updateAction } from '../utils/api.js'
 import TeamSelector from '../components/TeamSelector.jsx'
+import KanbanBoard from '../components/KanbanBoard.jsx'
 
 const RISK_COLORS = {
   LOW:      '#c8f04a',
@@ -38,6 +39,7 @@ export default function ActionsOverview() {
   const [checkingDuplicates, setCheckingDuplicates] = useState(false)
   const [duplicateResults, setDuplicateResults] = useState(null)
   const [selectedTeamId, setSelectedTeamId] = useState(null)
+  const [view, setView] = useState('list') // 'list' or 'kanban'
 
   useEffect(() => {
     checkSession().then(u => {
@@ -90,6 +92,29 @@ export default function ActionsOverview() {
       setError('Failed to scan for duplicates')
     } finally {
       setCheckingDuplicates(false)
+    }
+  }
+
+  async function handleStatusChange(meetingId, actionId, newStatus) {
+    try {
+      // Optimistic update
+      setActions(prev => prev.map(a => 
+        a.id === actionId ? { ...a, status: newStatus, completed: newStatus === 'done' } : a
+      ))
+      
+      // API call
+      await updateAction(meetingId, actionId, { 
+        status: newStatus,
+        completed: newStatus === 'done'
+      })
+      
+      // Refresh to get server state
+      await fetchActions()
+    } catch (e) {
+      console.error('Failed to update status:', e)
+      setError('Failed to update action status')
+      // Revert on error
+      await fetchActions()
     }
   }
 
@@ -179,6 +204,21 @@ export default function ActionsOverview() {
         </div>
 
         <div style={s.filters}>
+          <div style={s.filterGroup}>
+            <label style={s.filterLbl}>VIEW</label>
+            <div style={s.viewToggle}>
+              <button 
+                onClick={() => setView('list')}
+                style={{...s.viewToggleBtn, ...(view === 'list' ? s.viewBtnActive : s.viewBtnInactive)}}>
+                📋 List
+              </button>
+              <button 
+                onClick={() => setView('kanban')}
+                style={{...s.viewToggleBtn, ...(view === 'kanban' ? s.viewBtnActive : s.viewBtnInactive)}}>
+                📊 Kanban
+              </button>
+            </div>
+          </div>
           <div style={s.filterGroup}>
             <label style={s.filterLbl}>STATUS</label>
             <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
@@ -295,6 +335,11 @@ export default function ActionsOverview() {
                 : 'Upload a meeting to get started'}
             </p>
           </div>
+        ) : view === 'kanban' ? (
+          <KanbanBoard 
+            actions={filteredActions}
+            onStatusChange={handleStatusChange}
+          />
         ) : (
           <div style={s.meetingsList}>
             {meetings.map((meeting, idx) => (
@@ -494,4 +539,11 @@ const s = {
                   letterSpacing:'0.05em', marginBottom:6},
   historyList:{listStyle:'none', paddingLeft:12, marginTop:8},
   historyItem:{fontSize:10, color:'#6b7260', marginBottom:4, lineHeight:1.5},
+  viewToggle:{display:'flex', gap:8},
+  viewToggleBtn:{background:'none', border:'1px solid #3a3a2e', borderRadius:4,
+           padding:'8px 14px', fontSize:11, letterSpacing:'0.05em',
+           cursor:'pointer', fontFamily:"'DM Mono',monospace",
+           transition:'all 0.15s'},
+  viewBtnActive:{background:'#c8f04a', color:'#0c0c09', borderColor:'#c8f04a'},
+  viewBtnInactive:{background:'#1e1e16', color:'#8a8a74', borderColor:'#3a3a2e'},
 }

@@ -37,11 +37,11 @@ export async function getMeeting(meetingId) {
   return res.data
 }
 
-export async function updateAction(meetingId, actionId, completed) {
+export async function updateAction(meetingId, actionId, updates) {
   const headers = await authHeaders()
   const res = await axios.put(
     `${BASE}/meetings/${meetingId}/actions/${actionId}`,
-    { completed },
+    updates,
     { headers }
   )
   return res.data

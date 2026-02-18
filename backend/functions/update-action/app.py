@@ -13,6 +13,7 @@ def lambda_handler(event, context):
     action_id  = event['pathParameters']['actionId']
     body       = json.loads(event.get('body') or '{}')
     completed  = body.get('completed', False)
+    status     = body.get('status')  # New: support status field
 
     table    = dynamodb.Table(TABLE_NAME)
     response = table.get_item(Key={'userId': user_id, 'meetingId': meeting_id})
@@ -25,8 +26,24 @@ def lambda_handler(event, context):
     updated = False
     for action in actions:
         if action.get('id') == action_id:
+            # Update completed field
             action['completed'] = completed
             action['completedAt'] = datetime.now(timezone.utc).isoformat() if completed else None
+            
+            # Update status field if provided
+            if status:
+                valid_statuses = ['todo', 'in_progress', 'blocked', 'done']
+                if status in valid_statuses:
+                    action['status'] = status
+                    # Sync completed field with status
+                    if status == 'done':
+                        action['completed'] = True
+                        action['completedAt'] = datetime.now(timezone.utc).isoformat()
+                    elif action.get('completed'):
+                        # If moving away from done, mark as incomplete
+                        action['completed'] = False
+                        action['completedAt'] = None
+            
             updated = True
             break
 
@@ -42,7 +59,7 @@ def lambda_handler(event, context):
         }
     )
 
-    return _response(200, {'success': True, 'actionId': action_id, 'completed': completed})
+    return _response(200, {'success': True, 'actionId': action_id, 'completed': completed, 'status': status})
 
 
 def _response(code, body):
