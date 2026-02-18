@@ -18,10 +18,13 @@ TABLE_NAME = os.environ.get('MEETINGS_TABLE', 'meetingmind-meetings')
 FRONTEND_URL = os.environ.get('FRONTEND_URL', 'https://dcfx593ywvy92.cloudfront.net')
 SES_FROM_EMAIL = os.environ.get('SES_FROM_EMAIL', 'thecyberprinciples@gmail.com')
 
-# CRITICAL: Disable retries for Bedrock to prevent repeated Marketplace subscription triggers
-# Each retry was causing a new subscription validation attempt
+# CRITICAL: Configure Bedrock with exponential backoff for throttling
+# Retries are now safe since Nova models are working
 bedrock_config = Config(
-    retries={'max_attempts': 0, 'mode': 'standard'}
+    retries={
+        'max_attempts': 3,
+        'mode': 'adaptive'  # Adaptive mode handles throttling intelligently
+    }
 )
 
 dynamodb   = boto3.resource('dynamodb', region_name=REGION)
@@ -417,7 +420,7 @@ def _mock_analysis(title):
         }
 
 def _try_bedrock(transcript_text, title):
-    """Attempt real Bedrock analysis — fallback to mock on any failure."""
+    """Attempt real Bedrock analysis with retry logic for throttling."""
     today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
     prompt = f"""Analyze this meeting and return ONLY valid JSON:
 {{
@@ -440,29 +443,49 @@ Return ONLY JSON."""
     ]
 
     for model_id, model_type in models:
-        try:
-            if model_type == 'anthropic':
-                body = json.dumps({'anthropic_version':'bedrock-2023-05-31',
-                    'max_tokens':2000,'messages':[{'role':'user','content':prompt}]})
-            else:
-                body = json.dumps({'messages':[{'role':'user','content':[{'text':prompt}]}],
-                    'inferenceConfig':{'maxTokens':2000,'temperature':0.1}})
+        # Try each model with exponential backoff for throttling
+        max_retries = 3
+        base_delay = 2  # seconds
+        
+        for attempt in range(max_retries):
+            try:
+                if model_type == 'anthropic':
+                    body = json.dumps({'anthropic_version':'bedrock-2023-05-31',
+                        'max_tokens':2000,'messages':[{'role':'user','content':prompt}]})
+                else:
+                    body = json.dumps({'messages':[{'role':'user','content':[{'text':prompt}]}],
+                        'inferenceConfig':{'maxTokens':2000,'temperature':0.1}})
 
-            resp = bedrock.invoke_model(modelId=model_id, body=body)
-            result = json.loads(resp['body'].read())
+                resp = bedrock.invoke_model(modelId=model_id, body=body)
+                result = json.loads(resp['body'].read())
 
-            if model_type == 'anthropic':
-                text = result['content'][0]['text'].strip()
-            else:
-                text = result['output']['message']['content'][0]['text'].strip()
+                if model_type == 'anthropic':
+                    text = result['content'][0]['text'].strip()
+                else:
+                    text = result['output']['message']['content'][0]['text'].strip()
 
-            text = re.sub(r'^```json\s*|^```\s*|\s*```$','',text).strip()
-            parsed = json.loads(text)
-            print(f"Bedrock success with {model_id}")
-            return parsed
-        except Exception as e:
-            print(f"Model {model_id} failed: {e}")
-            continue
+                text = re.sub(r'^```json\s*|^```\s*|\s*```$','',text).strip()
+                parsed = json.loads(text)
+                print(f"Bedrock success with {model_id} (attempt {attempt + 1})")
+                return parsed
+                
+            except Exception as e:
+                error_str = str(e)
+                
+                # Check if it's a throttling error
+                if 'ThrottlingException' in error_str or 'TooManyRequestsException' in error_str:
+                    if attempt < max_retries - 1:
+                        delay = base_delay * (2 ** attempt)  # Exponential backoff: 2s, 4s, 8s
+                        print(f"Model {model_id} throttled, retrying in {delay}s (attempt {attempt + 1}/{max_retries})")
+                        time.sleep(delay)
+                        continue
+                    else:
+                        print(f"Model {model_id} throttled after {max_retries} attempts, moving to next model")
+                        break
+                else:
+                    # Non-throttling error, move to next model immediately
+                    print(f"Model {model_id} failed: {e}")
+                    break
 
     print("All Bedrock models failed — using mock analysis")
     return None
