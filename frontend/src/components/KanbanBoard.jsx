@@ -7,6 +7,7 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
+  useDroppable,
 } from '@dnd-kit/core';
 import {
   arrayMove,
@@ -19,9 +20,9 @@ import { CSS } from '@dnd-kit/utilities';
 
 // Column component
 function KanbanColumn({ id, title, actions, color }) {
-  const { setNodeRef } = useSortable({
+  const { setNodeRef } = useDroppable({
     id,
-    data: { type: 'column' }
+    data: { type: 'column', status: id }
   });
 
   const s = {
@@ -242,24 +243,24 @@ export default function KanbanBoard({ actions, onStatusChange }) {
     setActiveId(event.active.id);
   };
 
-  const handleDragOver = (event) => {
+  const handleDragEnd = (event) => {
     const { active, over } = event;
+    setActiveId(null);
+
     if (!over) return;
 
     const activeAction = actions.find(a => a.id === active.id);
-    const overColumn = over.data.current?.type === 'column' ? over.id : null;
+    if (!activeAction) return;
 
-    if (overColumn && activeAction) {
-      const currentStatus = getStatus(activeAction);
-      if (currentStatus !== overColumn) {
-        // Optimistic update
-        onStatusChange(activeAction.meetingId, activeAction.id, overColumn);
-      }
+    // Check if dropped over a column
+    const targetStatus = over.data?.current?.status || over.id;
+    const currentStatus = getStatus(activeAction);
+
+    // Only update if status changed
+    if (targetStatus && targetStatus !== currentStatus && columns[targetStatus]) {
+      console.log(`Moving action ${activeAction.id} from ${currentStatus} to ${targetStatus}`);
+      onStatusChange(activeAction.meetingId, activeAction.id, targetStatus);
     }
-  };
-
-  const handleDragEnd = (event) => {
-    setActiveId(null);
   };
 
   const s = {
@@ -281,7 +282,6 @@ export default function KanbanBoard({ actions, onStatusChange }) {
       sensors={sensors}
       collisionDetection={closestCorners}
       onDragStart={handleDragStart}
-      onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
       <div style={s.container}>
