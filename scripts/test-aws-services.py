@@ -36,7 +36,7 @@ def test_bedrock_runtime():
         client = boto3.client('bedrock-runtime', region_name=REGION)
         # Try to invoke Claude with minimal prompt
         response = client.invoke_model(
-            modelId='anthropic.claude-3-5-sonnet-20240620-v1:0',
+            modelId='anthropic.claude-3-haiku-20240307-v1:0',  # Use Haiku (stable)
             body=json.dumps({
                 "anthropic_version": "bedrock-2023-05-31",
                 "max_tokens": 10,
