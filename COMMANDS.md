@@ -2,6 +2,42 @@
 
 Quick reference for all deployment, testing, and maintenance commands.
 
+**Last Updated:** February 19, 2026  
+**Critical Fixes Applied:** ✅ Bedrock retry disable, ✅ Checkbox functionality
+
+---
+
+## ⚠️ CRITICAL - Pre-Deployment Checks
+
+### Backend Syntax Validation
+```bash
+# Verify all Lambda functions compile
+cd backend
+python -m py_compile functions/process-meeting/app.py
+python -m py_compile functions/check-duplicate/app.py
+python -m py_compile functions/update-action/app.py
+python -m py_compile functions/get-all-actions/app.py
+python -m py_compile functions/get-meeting/app.py
+
+# Validate SAM template
+sam validate
+```
+
+### Frontend Build Validation
+```bash
+cd frontend
+npm run build
+# Expected: Build succeeds in ~10s
+```
+
+### AWS Account Verification
+```bash
+aws sts get-caller-identity
+# Expected: Account 707411439284
+```
+
+---
+
 ## AWS Configuration
 
 ```bash
@@ -73,6 +109,36 @@ npm run dev
 ```
 
 ## Testing
+
+### ⚠️ Bedrock Tests - DISABLED
+
+**DO NOT RUN** these scripts (they trigger AWS Marketplace subscriptions):
+```bash
+# 🚫 DISABLED - DO NOT RUN:
+# python scripts/test-aws-services.py.DISABLED
+# python scripts/detailed-bedrock-test.py.DISABLED
+# python scripts/monitor-bedrock-access.py.DISABLED
+# python scripts/resolve-bedrock-payment.py.DISABLED
+# python scripts/check-bedrock-model-access.py.DISABLED
+```
+
+See `scripts/BEDROCK_TESTS_DISABLED.txt` for details.
+
+### ✅ Safe Tests
+
+```bash
+# Comprehensive test suite (no Bedrock)
+python scripts/comprehensive-test-suite.py
+
+# Test duplicate detection
+python scripts/test-duplicate-detection.py
+
+# Test Lambda directly
+python scripts/test-lambda-direct.py
+
+# Test API endpoint
+python scripts/test-api-endpoint.py
+```
 
 ### Comprehensive Test Suite
 
@@ -343,6 +409,18 @@ aws lambda update-function-code --function-name meetingmind-<function-name> --zi
 
 ## Important Notes
 
+### Critical Fixes Applied (Feb 19, 2026)
+
+1. **Bedrock Retry Disable** ✅
+   - `backend/functions/process-meeting/app.py` - Retries disabled to prevent Marketplace triggers
+   - `backend/functions/check-duplicate/app.py` - Retries disabled to prevent Marketplace triggers
+
+2. **Checkbox Functionality** ✅
+   - `frontend/src/pages/ActionsOverview.jsx` - onChange handler added
+   - Users can now check/uncheck action items without redirect
+
+### Deployment Guidelines
+
 - Always run `sam build` before `sam deploy`
 - CloudFront invalidation takes 1-2 minutes to propagate
 - Lambda updates take 10-15 seconds to become active
@@ -351,3 +429,19 @@ aws lambda update-function-code --function-name meetingmind-<function-name> --zi
 - Stack name is always `meetingmind-backend`
 - S3 bucket is always `meetingmind-frontend-707411439284`
 - CloudFront distribution is always `E3CAAI97MXY83V`
+
+### Post-Deployment Verification
+
+After deployment, verify:
+1. ✅ No new AWS Marketplace agreement emails
+2. ✅ Action item checkboxes work (no redirect)
+3. ✅ No errors in CloudWatch logs
+4. ✅ Meeting upload works
+5. ✅ Duplicate detection works
+
+### Documentation
+
+- `DEPLOY.md` - Full deployment guide with step-by-step instructions
+- `TEST_REPORT.md` - Comprehensive test results
+- `BEDROCK_ISSUE_ANALYSIS.md` - Bedrock payment issue details
+- `scripts/BEDROCK_TESTS_DISABLED.txt` - Critical warning about disabled tests

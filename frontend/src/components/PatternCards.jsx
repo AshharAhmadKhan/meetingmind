@@ -1,55 +1,127 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { getAllActions } from '../utils/api.js'
 
-// Pattern detection logic (mock - will use Bedrock later)
+// Statistical utilities
+function calculateStats(values) {
+  if (values.length === 0) return { mean: 0, stdDev: 0 }
+  const mean = values.reduce((sum, v) => sum + v, 0) / values.length
+  const variance = values.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / values.length
+  const stdDev = Math.sqrt(variance)
+  return { mean, stdDev }
+}
+
+function calculateGiniCoefficient(values) {
+  if (values.length === 0) return 0
+  const sorted = [...values].sort((a, b) => a - b)
+  const n = sorted.length
+  let sum = 0
+  for (let i = 0; i < n; i++) {
+    sum += (2 * (i + 1) - n - 1) * sorted[i]
+  }
+  const mean = sorted.reduce((a, b) => a + b, 0) / n
+  return sum / (n * n * mean)
+}
+
+// Meeting type classification (keyword-based, expandable to embeddings later)
+const MEETING_TYPE_KEYWORDS = {
+  planning: ['planning', 'strategy', 'roadmap', 'quarterly', 'okr', 'goals'],
+  standup: ['standup', 'daily', 'sync', 'check-in', 'status'],
+  retrospective: ['retro', 'retrospective', 'postmortem', 'review'],
+  brainstorm: ['brainstorm', 'ideation', 'workshop', 'design'],
+  decision: ['decision', 'approval', 'sign-off', 'review']
+}
+
+function classifyMeeting(title) {
+  if (!title) return 'other'
+  const lower = title.toLowerCase()
+  for (const [type, keywords] of Object.entries(MEETING_TYPE_KEYWORDS)) {
+    if (keywords.some(kw => lower.includes(kw))) return type
+  }
+  return 'other'
+}
+
+// Filter to last 30 days
+function filterRecent(items, dateField = 'createdAt', days = 30) {
+  const cutoff = new Date()
+  cutoff.setDate(cutoff.getDate() - days)
+  cutoff.setHours(0, 0, 0, 0)
+  
+  return items.filter(item => {
+    const dateStr = item[dateField]
+    if (!dateStr) return false
+    try {
+      const date = new Date(dateStr)
+      return date >= cutoff
+    } catch {
+      return false
+    }
+  })
+}
+
+// Pattern detection with statistical validity
 function detectPatterns(meetings, actions) {
   const patterns = []
   
-  // Pattern 1: Planning Paralysis
-  // Symptom: Many meetings with "planning" in title, low action completion
-  const planningMeetings = meetings.filter(m => 
-    m.title?.toLowerCase().includes('planning') || 
-    m.title?.toLowerCase().includes('strategy')
-  )
+  // Minimum sample size requirement
+  const MIN_MEETINGS = 5
+  const MIN_ACTIONS = 10
+  
+  // Filter to last 30 days
+  const recentMeetings = filterRecent(meetings)
+  const recentActions = filterRecent(actions)
+  
+  if (recentMeetings.length < MIN_MEETINGS || recentActions.length < MIN_ACTIONS) {
+    return [] // Not enough data for meaningful analysis
+  }
+  
+  const sampleSize = `Based on ${recentMeetings.length} meetings and ${recentActions.length} actions in last 30 days`
+  
+  // Pattern 1: Planning Paralysis (statistically validated)
+  const planningMeetings = recentMeetings.filter(m => classifyMeeting(m.title) === 'planning')
   if (planningMeetings.length >= 3) {
-    const planningActions = actions.filter(a => 
+    const planningActions = recentActions.filter(a => 
       planningMeetings.some(m => m.meetingId === a.meetingId)
     )
-    const completionRate = planningActions.length > 0
-      ? (planningActions.filter(a => a.completed).length / planningActions.length) * 100
-      : 0
     
-    if (completionRate < 50) {
-      patterns.push({
-        id: 'planning-paralysis',
-        name: 'Planning Paralysis',
-        icon: '🔄',
-        severity: 'high',
-        color: '#e87a6a',
-        symptoms: [
-          `${planningMeetings.length} planning meetings detected`,
-          `Only ${Math.round(completionRate)}% of planning actions completed`,
-          'Team stuck in analysis mode'
-        ],
-        prescription: [
-          'Set hard deadline for planning phase',
-          'Limit planning meetings to 2 per quarter',
-          'Require 1 executable action per planning meeting',
-          'Use timeboxing: 25% plan, 75% execute'
-        ],
-        impact: 'High - Reduces time-to-market by 40%',
-        successRate: 78
-      })
+    if (planningActions.length >= 5) {
+      const completionRate = (planningActions.filter(a => a.completed).length / planningActions.length) * 100
+      
+      // Calculate team average completion rate for comparison
+      const teamCompletionRate = (recentActions.filter(a => a.completed).length / recentActions.length) * 100
+      
+      // Detect if planning completion is significantly below team average
+      if (completionRate < teamCompletionRate - 15) {
+        patterns.push({
+          id: 'planning-paralysis',
+          name: 'Planning Paralysis',
+          icon: '🔄',
+          severity: 'high',
+          color: '#e87a6a',
+          symptoms: [
+            `${planningMeetings.length} planning meetings in last 30 days`,
+            `${Math.round(completionRate)}% completion vs ${Math.round(teamCompletionRate)}% team average`,
+            'Planning actions underperforming team baseline'
+          ],
+          prescription: [
+            'Set hard deadline for planning phase',
+            'Limit planning meetings to 2 per month',
+            'Require 1 executable action per planning meeting',
+            'Use timeboxing: 25% plan, 75% execute'
+          ],
+          confidence: Math.min(planningActions.length / 20, 1),
+          basedOn: sampleSize
+        })
+      }
     }
   }
   
-  // Pattern 2: Action Item Amnesia
-  // Symptom: High percentage of incomplete actions
-  const incompleteRate = actions.length > 0
-    ? (actions.filter(a => !a.completed).length / actions.length) * 100
-    : 0
+  // Pattern 2: Action Item Amnesia (relative threshold)
+  const incompleteRate = (recentActions.filter(a => !a.completed).length / recentActions.length) * 100
   
-  if (incompleteRate > 70) {
+  // Industry benchmark: 67% completion rate (33% incomplete)
+  const INDUSTRY_INCOMPLETE_RATE = 33
+  
+  if (incompleteRate > INDUSTRY_INCOMPLETE_RATE + 20) {
     patterns.push({
       id: 'action-amnesia',
       name: 'Action Item Amnesia',
@@ -57,9 +129,9 @@ function detectPatterns(meetings, actions) {
       severity: 'critical',
       color: '#e87a6a',
       symptoms: [
-        `${Math.round(incompleteRate)}% of actions incomplete`,
-        'Team forgets commitments after meetings',
-        'No follow-through on decisions'
+        `${Math.round(incompleteRate)}% incomplete vs ${INDUSTRY_INCOMPLETE_RATE}% industry average`,
+        'Significantly below industry completion standards',
+        'Actions not being followed through'
       ],
       prescription: [
         'Send automated reminders 24h before deadline',
@@ -67,55 +139,63 @@ function detectPatterns(meetings, actions) {
         'Assign explicit owners (no "team" ownership)',
         'Use this tool\'s email notifications'
       ],
-      impact: 'Critical - Improves execution by 60%',
-      successRate: 85
+      confidence: Math.min(recentActions.length / 50, 1),
+      basedOn: sampleSize
     })
   }
   
-  // Pattern 3: Meeting Debt Spiral
-  // Symptom: Many meetings, high debt
-  if (meetings.length >= 10) {
-    const avgActionsPerMeeting = actions.length / meetings.length
-    if (avgActionsPerMeeting > 5) {
+  // Pattern 3: Meeting Debt Spiral (statistical threshold)
+  if (recentMeetings.length >= 8) {
+    const actionsPerMeeting = recentMeetings.map(m => {
+      return recentActions.filter(a => a.meetingId === m.meetingId).length
+    })
+    
+    const { mean, stdDev } = calculateStats(actionsPerMeeting)
+    
+    // Detect if average is more than 1 std dev above mean
+    if (mean > 4 && stdDev > 0 && mean > 3 + stdDev) {
       patterns.push({
         id: 'meeting-debt',
         name: 'Meeting Debt Spiral',
-        icon: '💸',
+        icon: '�',
         severity: 'high',
         color: '#e8c06a',
         symptoms: [
-          `${meetings.length} meetings generating ${actions.length} actions`,
-          `Average ${Math.round(avgActionsPerMeeting)} actions per meeting`,
-          'Team drowning in commitments'
+          `Average ${mean.toFixed(1)} actions per meeting (σ=${stdDev.toFixed(1)})`,
+          `${recentMeetings.length} meetings generating ${recentActions.length} actions`,
+          'Action generation rate above sustainable threshold'
         ],
         prescription: [
           'Cancel recurring meetings with no outcomes',
-          'Merge similar meetings (e.g., all planning into one)',
+          'Merge similar meetings',
           'Limit action items to 3 per meeting',
           'Use async updates instead of meetings'
         ],
-        impact: 'High - Frees up 30% of calendar time',
-        successRate: 72
+        confidence: Math.min(recentMeetings.length / 15, 1),
+        basedOn: sampleSize
       })
     }
   }
   
-  // Pattern 4: Silent Majority
-  // Symptom: Uneven action distribution
+  // Pattern 4: Silent Majority (Gini coefficient)
   const ownerCounts = {}
-  actions.forEach(a => {
-    const owner = a.owner || 'Unassigned'
-    ownerCounts[owner] = (ownerCounts[owner] || 0) + 1
+  recentActions.forEach(a => {
+    const owner = (a.owner || 'Unassigned').trim().toLowerCase()
+    if (owner !== 'unassigned') {
+      ownerCounts[owner] = (ownerCounts[owner] || 0) + 1
+    }
   })
   
-  const owners = Object.keys(ownerCounts).filter(o => o !== 'Unassigned')
+  const owners = Object.keys(ownerCounts)
   if (owners.length >= 3) {
     const counts = owners.map(o => ownerCounts[o])
-    const max = Math.max(...counts)
-    const min = Math.min(...counts)
-    const ratio = max / min
+    const gini = calculateGiniCoefficient(counts)
     
-    if (ratio > 3) {
+    // Gini > 0.4 indicates high inequality
+    if (gini > 0.4) {
+      const max = Math.max(...counts)
+      const min = Math.min(...counts)
+      
       patterns.push({
         id: 'silent-majority',
         name: 'Silent Majority',
@@ -123,9 +203,9 @@ function detectPatterns(meetings, actions) {
         severity: 'medium',
         color: '#e8c06a',
         symptoms: [
-          `Uneven distribution: ${max} actions for one person, ${min} for another`,
-          'Some team members not contributing',
-          'Same people always volunteering'
+          `Gini coefficient: ${gini.toFixed(2)} (>0.4 indicates high inequality)`,
+          `Distribution: ${max} actions (most) vs ${min} actions (least)`,
+          'Uneven contribution across team members'
         ],
         prescription: [
           'Round-robin action assignment',
@@ -133,23 +213,25 @@ function detectPatterns(meetings, actions) {
           'Rotate meeting facilitator role',
           'Use anonymous voting for decisions'
         ],
-        impact: 'Medium - Increases team engagement by 45%',
-        successRate: 68
+        confidence: Math.min(owners.length / 5, 1),
+        basedOn: sampleSize
       })
     }
   }
   
-  // Pattern 5: Chronic Blocker
-  // Symptom: Duplicate actions (from Day 5 data)
+  // Pattern 5: Chronic Blocker (exact string match only - semantic similarity needs backend)
   const taskCounts = {}
-  actions.forEach(a => {
+  recentActions.forEach(a => {
     const task = a.task?.toLowerCase().trim()
-    if (task) {
+    if (task && task.length > 10) { // Ignore very short tasks
       taskCounts[task] = (taskCounts[task] || 0) + 1
     }
   })
   
-  const duplicates = Object.entries(taskCounts).filter(([_, count]) => count >= 3)
+  const duplicates = Object.entries(taskCounts)
+    .filter(([_, count]) => count >= 3)
+    .sort((a, b) => b[1] - a[1])
+  
   if (duplicates.length > 0) {
     const [topTask, topCount] = duplicates[0]
     patterns.push({
@@ -159,18 +241,18 @@ function detectPatterns(meetings, actions) {
       severity: 'critical',
       color: '#e87a6a',
       symptoms: [
-        `"${topTask}" repeated ${topCount} times`,
-        'Same tasks keep appearing in meetings',
-        'Underlying issue not being addressed'
+        `"${topTask.substring(0, 50)}${topTask.length > 50 ? '...' : ''}" repeated ${topCount} times`,
+        'Same task appearing across multiple meetings',
+        'Underlying issue not being resolved'
       ],
       prescription: [
         'Break down vague tasks into specific sub-tasks',
-        'Identify root cause (lack of resources? unclear requirements?)',
+        'Identify root cause (resources? requirements? dependencies?)',
         'Escalate blockers to leadership',
         'Use 5 Whys technique to find real problem'
       ],
-      impact: 'Critical - Unblocks 50% of stalled work',
-      successRate: 82
+      confidence: Math.min(topCount / 5, 1),
+      basedOn: sampleSize
     })
   }
   
@@ -182,23 +264,36 @@ export default function PatternCards({ meetings }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [expanded, setExpanded] = useState({})
+  const abortControllerRef = useRef(null)
 
   useEffect(() => {
     detectPatternsFromData()
+    
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort()
+      }
+    }
   }, [meetings])
 
   async function detectPatternsFromData() {
     try {
+      abortControllerRef.current = new AbortController()
       const data = await getAllActions()
       const actions = data.actions || []
       const detected = detectPatterns(meetings, actions)
       setPatterns(detected)
     } catch (e) {
-      setError('Failed to detect patterns')
+      if (e.name !== 'AbortError') {
+        setError('Failed to detect patterns')
+      }
     } finally {
       setLoading(false)
     }
   }
+  
+  // Memoize pattern detection
+  const memoizedPatterns = useMemo(() => patterns, [patterns])
 
   function toggleExpanded(patternId) {
     setExpanded(prev => ({
@@ -210,7 +305,7 @@ export default function PatternCards({ meetings }) {
   if (loading) {
     return (
       <div style={s.loading}>
-        <div style={{...s.spin, animation:'spin 1s linear infinite'}}/>
+        <div style={s.spin}/>
       </div>
     )
   }
@@ -219,7 +314,7 @@ export default function PatternCards({ meetings }) {
     return <div style={s.error}>{error}</div>
   }
 
-  if (patterns.length === 0) {
+  if (memoizedPatterns.length === 0) {
     return (
       <div style={s.empty}>
         <p style={s.emptyIcon}>✨</p>
@@ -237,7 +332,7 @@ export default function PatternCards({ meetings }) {
       </div>
       
       <div style={s.list}>
-        {patterns.map((pattern, idx) => {
+        {memoizedPatterns.map((pattern, idx) => {
           const isExpanded = expanded[pattern.id]
           
           return (
@@ -288,14 +383,14 @@ export default function PatternCards({ meetings }) {
                   
                   <div style={s.footer}>
                     <div style={s.footerItem}>
-                      <span style={s.footerLabel}>Impact:</span>
-                      <span style={s.footerValue}>{pattern.impact}</span>
+                      <span style={s.footerLabel}>Confidence:</span>
+                      <span style={{...s.footerValue, color: pattern.confidence > 0.7 ? '#c8f04a' : '#e8c06a'}}>
+                        {Math.round(pattern.confidence * 100)}%
+                      </span>
                     </div>
                     <div style={s.footerItem}>
-                      <span style={s.footerLabel}>Success Rate:</span>
-                      <span style={{...s.footerValue, color:'#c8f04a'}}>
-                        {pattern.successRate}%
-                      </span>
+                      <span style={s.footerLabel}>Data:</span>
+                      <span style={s.footerValue}>{pattern.basedOn}</span>
                     </div>
                   </div>
                 </div>
@@ -318,7 +413,8 @@ const s = {
   loading:{display:'flex', alignItems:'center', justifyContent:'center',
            padding:'40px 0'},
   spin:{width:16, height:16, border:'2px solid #2a2a20',
-        borderTopColor:'#c8f04a', borderRadius:'50%'},
+        borderTopColor:'#c8f04a', borderRadius:'50%',
+        animation:'spin 1s linear infinite'},
   error:{padding:'12px', background:'#1a0e0e', border:'1px solid #4a2a2a',
          borderRadius:4, color:'#e87a6a', fontSize:11},
   empty:{padding:'40px 0', textAlign:'center'},
@@ -348,12 +444,42 @@ const s = {
                 textTransform:'uppercase', marginBottom:8},
   ul:{listStyle:'none', paddingLeft:0, display:'flex', flexDirection:'column', gap:6},
   li:{fontSize:11, color:'#8a8a74', lineHeight:1.6, paddingLeft:16,
-      position:'relative',
-      '::before':{content:'"•"', position:'absolute', left:0, color:'#6b7260'}},
+      position:'relative'},
   footer:{marginTop:16, paddingTop:12, borderTop:'1px solid #2a2a20',
-          display:'flex', gap:24},
+          display:'flex', flexDirection:'column', gap:12},
   footerItem:{display:'flex', flexDirection:'column', gap:4},
   footerLabel:{fontSize:9, letterSpacing:'0.1em', color:'#6b7260',
                textTransform:'uppercase'},
   footerValue:{fontSize:11, color:'#e8e4d0'},
+}
+
+// Add CSS for animations and pseudo-elements
+const styleSheet = document.createElement('style')
+styleSheet.textContent = `
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  
+  @keyframes fadeUp {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  .patterncard li::before {
+    content: '•';
+    position: absolute;
+    left: 0;
+    color: #6b7260;
+  }
+`
+if (!document.head.querySelector('style[data-pattern-cards]')) {
+  styleSheet.setAttribute('data-pattern-cards', 'true')
+  document.head.appendChild(styleSheet)
 }

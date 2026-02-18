@@ -11,7 +11,14 @@ def lambda_handler(event, context):
     user_id    = event['requestContext']['authorizer']['claims']['sub']
     meeting_id = event['pathParameters']['meetingId']
     action_id  = event['pathParameters']['actionId']
-    body       = json.loads(event.get('body') or '{}')
+    
+    # Parse body - handle both string and dict
+    body_raw = event.get('body', '{}')
+    if isinstance(body_raw, str):
+        body = json.loads(body_raw)
+    else:
+        body = body_raw or {}
+    
     completed  = body.get('completed', False)
     status     = body.get('status')  # New: support status field
 

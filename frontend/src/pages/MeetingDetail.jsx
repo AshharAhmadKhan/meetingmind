@@ -132,9 +132,13 @@ export default function MeetingDetail() {
 
   async function toggleAction(id, cur) {
     try {
-      await updateAction(meetingId, id, !cur)
+      const newStatus = cur ? 'todo' : 'done';
+      await updateAction(meetingId, id, { 
+        status: newStatus,
+        completed: newStatus === 'done'
+      });
       setMeeting(m => ({...m, actionItems: m.actionItems.map(a =>
-        a.id === id ? {...a, completed: !cur} : a)}))
+        a.id === id ? {...a, completed: !cur, status: newStatus} : a)}))
     } catch { setError('Failed to update') }
   }
 

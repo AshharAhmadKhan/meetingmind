@@ -1,5 +1,6 @@
 import json
 import boto3
+from botocore.config import Config
 import os
 import re
 import time
@@ -17,8 +18,14 @@ TABLE_NAME = os.environ.get('MEETINGS_TABLE', 'meetingmind-meetings')
 FRONTEND_URL = os.environ.get('FRONTEND_URL', 'https://dcfx593ywvy92.cloudfront.net')
 SES_FROM_EMAIL = os.environ.get('SES_FROM_EMAIL', 'thecyberprinciples@gmail.com')
 
+# CRITICAL: Disable retries for Bedrock to prevent repeated Marketplace subscription triggers
+# Each retry was causing a new subscription validation attempt
+bedrock_config = Config(
+    retries={'max_attempts': 0, 'mode': 'standard'}
+)
+
 dynamodb   = boto3.resource('dynamodb', region_name=REGION)
-bedrock    = boto3.client('bedrock-runtime', region_name=REGION)
+bedrock    = boto3.client('bedrock-runtime', region_name=REGION, config=bedrock_config)
 transcribe = boto3.client('transcribe', region_name=REGION)
 ses        = boto3.client('ses', region_name=REGION)
 

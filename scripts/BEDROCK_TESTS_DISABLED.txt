@@ -1,0 +1,42 @@
+🚨 CRITICAL - ALL BEDROCK TEST SCRIPTS DISABLED
+
+Date: 2026-02-19
+Reason: Repeated Marketplace subscription triggers
+
+AFFECTED SCRIPTS (DO NOT RUN):
+- test-aws-services.py
+- detailed-bedrock-test.py  
+- monitor-bedrock-access.py
+- resolve-bedrock-payment.py
+- comprehensive-test-suite.py
+- generate-embeddings.py
+
+ISSUE:
+Each invocation of bedrock.invoke_model() triggers AWS Marketplace 
+subscription validation, which creates agreement emails.
+
+We ran these scripts 5+ times in the last hour, causing repeated 
+subscription attempts.
+
+ACTION TAKEN:
+1. All test scripts flagged as DISABLED
+2. No further Bedrock invocations until issue resolved
+3. Audit complete - no automated loops found
+4. No production code is running (no Lambda invocations)
+
+NEXT STEPS:
+1. Wait for AWS Marketplace to stabilize (24 hours)
+2. Contact AWS Support about repeated subscription triggers
+3. Do NOT run any Bedrock tests
+4. System will use mock analysis until cleared by AWS
+
+SAFE TO RUN:
+- Transcribe tests (no Marketplace involvement)
+- DynamoDB operations
+- S3 operations
+- Frontend deployment
+
+DO NOT RUN UNTIL CLEARED:
+- Any script with "bedrock" in the name
+- Any script that calls invoke_model()
+- test-aws-services.py (includes Bedrock tests)

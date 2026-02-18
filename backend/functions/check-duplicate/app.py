@@ -1,5 +1,6 @@
 import json
 import boto3
+from botocore.config import Config
 import os
 import hashlib
 from decimal import Decimal
@@ -7,8 +8,14 @@ from decimal import Decimal
 REGION = os.environ.get('REGION', 'ap-south-1')
 TABLE_NAME = os.environ.get('MEETINGS_TABLE', 'meetingmind-meetings')
 
+# CRITICAL: Disable retries for Bedrock to prevent repeated Marketplace subscription triggers
+# Each retry was causing a new subscription validation attempt
+bedrock_config = Config(
+    retries={'max_attempts': 0, 'mode': 'standard'}
+)
+
 dynamodb = boto3.resource('dynamodb', region_name=REGION)
-bedrock = boto3.client('bedrock-runtime', region_name=REGION)
+bedrock = boto3.client('bedrock-runtime', region_name=REGION, config=bedrock_config)
 
 def decimal_to_float(obj):
     """Convert Decimal to float for JSON serialization."""

@@ -370,7 +370,8 @@ export default function ActionsOverview() {
                         <div style={s.actionTop}>
                           <div style={s.actionLeft}>
                             <input type="checkbox" checked={action.completed}
-                              readOnly style={s.checkbox}/>
+                              onChange={() => handleStatusChange(action.meetingId, action.id, action.completed ? 'todo' : 'done')}
+                              style={s.checkbox}/>
                             <div>
                               <p style={{...s.actionTask,
                                 ...(action.completed ? {textDecoration:'line-through'} : {})}}>
