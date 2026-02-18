@@ -25,7 +25,7 @@ def _generate_embedding(text):
         # Try Bedrock Titan Embeddings
         body = json.dumps({"inputText": text})
         response = bedrock.invoke_model(
-            modelId='amazon.titan-embed-text-v1',
+            modelId='amazon.titan-embed-text-v2:0',
             body=body
         )
         result = json.loads(response['body'].read())

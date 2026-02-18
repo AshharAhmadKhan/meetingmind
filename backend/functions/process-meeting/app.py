@@ -284,7 +284,7 @@ def _generate_embedding(text):
         # Try Bedrock Titan Embeddings
         body = json.dumps({"inputText": text})
         response = bedrock.invoke_model(
-            modelId='amazon.titan-embed-text-v1',
+            modelId='amazon.titan-embed-text-v2:0',
             body=body
         )
         result = json.loads(response['body'].read())
@@ -427,7 +427,7 @@ Transcript: {transcript_text[:6000]}
 Return ONLY JSON."""
 
     models = [
-        ('anthropic.claude-3-haiku-20240307-v1:0', 'anthropic'),
+        ('anthropic.claude-3-5-sonnet-20240620-v1:0', 'anthropic'),  # Updated to Claude 3.5
         ('amazon.nova-lite-v1:0', 'nova'),
         ('amazon.nova-micro-v1:0', 'nova'),
     ]
