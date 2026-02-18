@@ -108,12 +108,12 @@ export default function ActionsOverview() {
         completed: newStatus === 'done'
       })
       
-      // Refresh to get server state
-      await fetchActions()
+      // Don't refresh - trust the optimistic update
+      // The status will persist in backend for next page load
     } catch (e) {
       console.error('Failed to update status:', e)
       setError('Failed to update action status')
-      // Revert on error
+      // Revert on error by refreshing
       await fetchActions()
     }
   }

@@ -78,6 +78,7 @@ def lambda_handler(event, context):
                     'deadline': action.get('deadline'),
                     'completed': is_complete,
                     'completedAt': action.get('completedAt'),
+                    'status': action.get('status', 'done' if is_complete else 'todo'),  # Include status field
                     'riskScore': action.get('riskScore', 0),
                     'riskLevel': action.get('riskLevel', 'LOW'),
                     'createdAt': action.get('createdAt'),
