@@ -21,8 +21,8 @@ def check_bedrock_access():
     
     models_to_test = [
         ('anthropic.claude-3-haiku-20240307-v1:0', 'Claude Haiku'),
-        ('amazon.nova-lite-v1:0', 'Nova Lite'),
-        ('amazon.nova-micro-v1:0', 'Nova Micro'),
+        ('apac.amazon.nova-lite-v1:0', 'Nova Lite'),
+        ('apac.amazon.nova-micro-v1:0', 'Nova Micro'),
         ('amazon.titan-embed-text-v2:0', 'Titan Embeddings v2'),
     ]
     

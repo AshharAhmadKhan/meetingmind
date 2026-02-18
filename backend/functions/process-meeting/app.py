@@ -435,8 +435,8 @@ Return ONLY JSON."""
 
     models = [
         ('anthropic.claude-3-haiku-20240307-v1:0', 'anthropic'),  # Use Haiku (stable, works with on-demand)
-        ('amazon.nova-lite-v1:0', 'nova'),
-        ('amazon.nova-micro-v1:0', 'nova'),
+        ('apac.amazon.nova-lite-v1:0', 'nova'),  # APAC inference profile
+        ('apac.amazon.nova-micro-v1:0', 'nova'),  # APAC inference profile
     ]
 
     for model_id, model_type in models:
