@@ -572,12 +572,18 @@ Resources:
       Environment:
         Variables:
           USER_POOL_ID: !Ref MeetingMindUserPool
+          ADMIN_EMAIL: itzashhar@gmail.com
       Policies:
         - Statement:
             - Effect: Allow
               Action:
                 - cognito-idp:AdminDisableUser
               Resource: !GetAtt MeetingMindUserPool.Arn
+            - Effect: Allow
+              Action:
+                - ses:SendEmail
+                - ses:SendRawEmail
+              Resource: "*"
 
   # ── LAMBDA: SEND WELCOME EMAIL ─────────────────────────────
   SendWelcomeEmailFunction:
