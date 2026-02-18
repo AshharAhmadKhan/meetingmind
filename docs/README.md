@@ -1,28 +1,29 @@
-# Documentation Structure
+# Documentation
 
-This folder contains all project documentation organized by category.
+All project documentation for MeetingMind.
 
-## Folders
+## Files
 
-### `/implementation`
-Implementation details and feature documentation:
-- `DAY2_ROI_IMPLEMENTATION.md` - ROI calculation feature
-- `DAY5_DUPLICATE_DETECTION.md` - Duplicate action detection with embeddings
-- `IMPLEMENTATION_SUMMARY.md` - Overall implementation summary
+### ARCHITECTURE.md
+Technical architecture documentation covering:
+- AWS services and their roles
+- Lambda functions and their purposes
+- Data models (DynamoDB schemas)
+- Processing pipeline flow
+- AI/ML pipeline with multi-model fallback
+- Security, performance, and monitoring
 
-### `/guides`
-User and developer guides:
-- `DEPLOYMENT_GUIDE.md` - How to deploy the application
-- `TEST_MEETING_SCRIPT.md` - Testing procedures
-
-### `/session-logs` (gitignored)
-Session logs, diagnostics, and temporary documentation created during development.
-These files are not committed to the repository.
+### FEATURES.md
+Complete feature documentation covering:
+- Core features (upload, dashboard, meeting detail, actions overview)
+- AI-powered features (risk prediction, duplicate detection, pattern analysis)
+- Gamification (leaderboard, achievements, graveyard)
+- User experience and design system
+- Future roadmap
 
 ## Root Documentation
 
-Essential docs kept in project root:
-- `READY_FOR_DAY3.md` - Current project status
-- `QUICK_REFERENCE.md` - Quick reference guide
-- `COMPETITION_ARTICLE.md` - Project context and competition details
+Essential docs in project root:
+- `README.md` - Project overview and quick start
+- `COMMANDS.md` - All deployment and testing commands
 
