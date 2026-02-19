@@ -10,7 +10,6 @@ import {
   useDroppable,
 } from '@dnd-kit/core';
 import {
-  arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
@@ -149,6 +148,11 @@ const ActionCard = React.memo(function ActionCard({ action }) {
       color: '#fff',
       marginBottom: '8px',
       lineHeight: '1.4',
+      overflow: 'hidden',
+      display: '-webkit-box',
+      WebkitLineClamp: 2,
+      WebkitBoxOrient: 'vertical',
+      wordBreak: 'break-word',
     },
     meta: {
       display: 'flex',
@@ -349,7 +353,7 @@ export default function KanbanBoard({ actions, onStatusChange }) {
           />
         ))}
       </div>
-      <DragOverlay>
+      <DragOverlay style={{ zIndex: 9999 }}>
         {activeId ? (
           <ActionCard action={actions.find(a => a.id === activeId)} />
         ) : null}

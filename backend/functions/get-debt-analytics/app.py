@@ -7,6 +7,13 @@ from decimal import Decimal
 dynamodb = boto3.resource('dynamodb')
 TABLE_NAME = os.environ['MEETINGS_TABLE']
 
+CORS_HEADERS = {
+    'Access-Control-Allow-Origin': 'https://dcfx593ywvy92.cloudfront.net',
+    'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+    'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
+    'Content-Type': 'application/json'
+}
+
 # Constants based on research
 AVG_HOURLY_RATE = 75  # $75/hour average developer salary
 AVG_BLOCKED_TIME_HOURS = 3.2  # Research-backed: time blocked per incomplete action
@@ -16,6 +23,10 @@ def lambda_handler(event, context):
     """
     Get meeting debt analytics for authenticated user
     """
+    # Handle CORS preflight
+    if event.get('httpMethod') == 'OPTIONS':
+        return {'statusCode': 200, 'headers': CORS_HEADERS, 'body': ''}
+    
     try:
         # Extract user ID from Cognito authorizer (same pattern as list-meetings)
         user_id = event['requestContext']['authorizer']['claims']['sub']
@@ -48,10 +59,7 @@ def lambda_handler(event, context):
         
         return {
             'statusCode': 200,
-            'headers': {
-                'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*'
-            },
+            'headers': CORS_HEADERS,
             'body': json.dumps(analytics, default=decimal_default)
         }
         
@@ -61,11 +69,8 @@ def lambda_handler(event, context):
         traceback.print_exc()
         return {
             'statusCode': 500,
-            'headers': {
-                'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*'
-            },
-            'body': json.dumps({'error': str(e)})
+            'headers': CORS_HEADERS,
+            'body': json.dumps({'error': str(e)}, default=decimal_default)
         }
 
 

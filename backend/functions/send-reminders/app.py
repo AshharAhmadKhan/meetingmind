@@ -9,8 +9,26 @@ sns        = boto3.client('sns')
 TABLE_NAME = os.environ['MEETINGS_TABLE']
 TOPIC_ARN  = os.environ['SNS_TOPIC_ARN']
 
+CORS_HEADERS = {
+    'Access-Control-Allow-Origin': 'https://dcfx593ywvy92.cloudfront.net',
+    'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+    'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
+    'Content-Type': 'application/json'
+}
+
+
+def decimal_to_float(obj):
+    """Convert Decimal to float for JSON serialization"""
+    if isinstance(obj, Decimal):
+        return float(obj)
+    raise TypeError
+
 
 def lambda_handler(event, context):
+    # Handle CORS preflight
+    if event.get('httpMethod') == 'OPTIONS':
+        return {'statusCode': 200, 'headers': CORS_HEADERS, 'body': ''}
+    
     print("Running daily reminder check...")
     table   = dynamodb.Table(TABLE_NAME)
     today   = datetime.now(timezone.utc).date()
@@ -48,7 +66,11 @@ def lambda_handler(event, context):
             reminders_sent += 1
 
     print(f"✅ Sent {reminders_sent} reminders")
-    return {'statusCode': 200, 'body': f'Sent {reminders_sent} reminders'}
+    return {
+        'statusCode': 200,
+        'headers': CORS_HEADERS,
+        'body': json.dumps({'message': f'Sent {reminders_sent} reminders'}, default=decimal_to_float)
+    }
 
 
 def _send_reminder(meeting, actions):

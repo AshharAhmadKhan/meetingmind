@@ -2,12 +2,31 @@ import json
 import boto3
 import os
 from datetime import datetime, timezone
+from decimal import Decimal
 
 dynamodb   = boto3.resource('dynamodb')
 TABLE_NAME = os.environ['MEETINGS_TABLE']
 
+CORS_HEADERS = {
+    'Access-Control-Allow-Origin': 'https://dcfx593ywvy92.cloudfront.net',
+    'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+    'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
+    'Content-Type': 'application/json'
+}
+
+
+def decimal_to_float(obj):
+    """Convert Decimal to float for JSON serialization"""
+    if isinstance(obj, Decimal):
+        return float(obj)
+    raise TypeError
+
 
 def lambda_handler(event, context):
+    # Handle CORS preflight
+    if event.get('httpMethod') == 'OPTIONS':
+        return {'statusCode': 200, 'headers': CORS_HEADERS, 'body': ''}
+    
     user_id    = event['requestContext']['authorizer']['claims']['sub']
     meeting_id = event['pathParameters']['meetingId']
     action_id  = event['pathParameters']['actionId']
@@ -72,6 +91,6 @@ def lambda_handler(event, context):
 def _response(code, body):
     return {
         'statusCode': code,
-        'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
-        'body': json.dumps(body)
+        'headers': CORS_HEADERS,
+        'body': json.dumps(body, default=decimal_to_float)
     }

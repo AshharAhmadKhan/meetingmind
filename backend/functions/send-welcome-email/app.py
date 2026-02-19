@@ -1,19 +1,43 @@
 import boto3
 import os
+import json
+from decimal import Decimal
 
 ses = boto3.client('ses')
 SES_FROM_EMAIL = os.environ['SES_FROM_EMAIL']
 FRONTEND_URL = os.environ['FRONTEND_URL']
+
+CORS_HEADERS = {
+    'Access-Control-Allow-Origin': 'https://dcfx593ywvy92.cloudfront.net',
+    'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+    'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
+    'Content-Type': 'application/json'
+}
+
+
+def decimal_to_float(obj):
+    """Convert Decimal to float for JSON serialization"""
+    if isinstance(obj, Decimal):
+        return float(obj)
+    raise TypeError
 
 def lambda_handler(event, context):
     """
     Send welcome email when user is approved
     Triggered manually via CLI or API
     """
+    # Handle CORS preflight
+    if event.get('httpMethod') == 'OPTIONS':
+        return {'statusCode': 200, 'headers': CORS_HEADERS, 'body': ''}
+    
     email = event.get('email')
     
     if not email:
-        return {'statusCode': 400, 'body': 'Email required'}
+        return {
+            'statusCode': 400,
+            'headers': CORS_HEADERS,
+            'body': json.dumps({'error': 'Email required'}, default=decimal_to_float)
+        }
     
     subject = "🎉 Your MeetingMind account is approved!"
     
@@ -75,7 +99,15 @@ def lambda_handler(event, context):
             }
         )
         print(f"Welcome email sent to {email}")
-        return {'statusCode': 200, 'body': f'Welcome email sent to {email}'}
+        return {
+            'statusCode': 200,
+            'headers': CORS_HEADERS,
+            'body': json.dumps({'message': f'Welcome email sent to {email}'}, default=decimal_to_float)
+        }
     except Exception as e:
         print(f"Failed to send welcome email: {e}")
-        return {'statusCode': 500, 'body': str(e)}
+        return {
+            'statusCode': 500,
+            'headers': CORS_HEADERS,
+            'body': json.dumps({'error': str(e)}, default=decimal_to_float)
+        }

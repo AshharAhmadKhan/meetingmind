@@ -208,8 +208,178 @@ def _calculate_meeting_roi(actions, decisions, meeting_duration_minutes=30):
             'meeting_duration_minutes': 30
         }
 
+def _calculate_health_score(action_items, decisions, created_at):
+    """
+    Calculate meeting health score (0-100) and letter grade.
+    
+    Formula:
+    - Completion rate: 40%
+    - Owner assignment rate: 30%
+    - Inverted risk score: 20%
+    - Recency bonus: 10%
+    """
+    if not action_items:
+        # No actions = perfect score (nothing to fail)
+        return {'score': Decimal('100.0'), 'grade': 'A', 'label': 'Perfect meeting'}
+    
+    total = len(action_items)
+    completed = sum(1 for a in action_items if a.get('completed', False))
+    owned = sum(1 for a in action_items if a.get('owner') and a['owner'] != 'Unassigned')
+    
+    # Calculate average risk score
+    risk_scores = [a.get('riskScore', 0) for a in action_items]
+    avg_risk = sum(risk_scores) / len(risk_scores) if risk_scores else 0
+    
+    # Calculate recency bonus (meetings < 7 days old get bonus)
+    recency_bonus = 1.0
+    try:
+        days_old = (datetime.now(timezone.utc) - created_at).days
+        recency_bonus = 1.0 if days_old < 7 else 0.8
+    except:
+        pass
+    
+    # Calculate weighted score
+    completion_rate = (completed / total) * 40
+    owner_rate = (owned / total) * 30
+    risk_inverted = ((100 - avg_risk) / 100) * 20
+    recency_component = recency_bonus * 10
+    
+    score = completion_rate + owner_rate + risk_inverted + recency_component
+    score = min(max(score, 0), 100)  # Clamp to 0-100
+    
+    # Determine grade and label
+    if score >= 90:
+        grade, label = 'A', 'Excellent meeting'
+    elif score >= 80:
+        grade, label = 'B', 'Strong meeting'
+    elif score >= 70:
+        grade, label = 'C', 'Average meeting'
+    elif score >= 60:
+        grade, label = 'D', 'Poor meeting'
+    else:
+        grade, label = 'F', 'Failed meeting'
+    
+    return {
+        'score': Decimal(str(round(score, 1))),
+        'grade': grade,
+        'label': label
+    }
+
+
+def _generate_autopsy(action_items, decisions, transcript_text, health_score):
+    """
+    Generate meeting autopsy for failed meetings (D/F grades or ghost meetings).
+    Uses multi-model fallback like epitaphs.
+    """
+    # Only generate for D/F grades or ghost meetings
+    is_ghost = len(decisions) == 0 and len(action_items) == 0
+    if health_score >= 65 and not is_ghost:
+        return None
+    
+    # Calculate metrics for autopsy
+    total_actions = len(action_items)
+    unowned_count = sum(1 for a in action_items if not a.get('owner') or a['owner'] == 'Unassigned')
+    decision_count = len(decisions)
+    
+    # Estimate meeting duration from transcript (rough: 150 words per minute)
+    word_count = len(transcript_text.split())
+    duration_minutes = max(15, min(90, word_count // 150))  # Clamp between 15-90 min
+    
+    # Calculate duplicate count (actions with similar tasks)
+    duplicate_count = 0
+    task_texts = [a.get('task', '').lower().strip() for a in action_items if a.get('task')]
+    for i, task in enumerate(task_texts):
+        if task and len(task) > 10:
+            for other_task in task_texts[i+1:]:
+                if task in other_task or other_task in task:
+                    duplicate_count += 1
+                    break
+    
+    # Extract speaker distribution from transcript (simple heuristic)
+    # Look for patterns like "Speaker 1:", "John:", etc.
+    speaker_lines = {}
+    for line in transcript_text.split('\n'):
+        if ':' in line:
+            speaker = line.split(':')[0].strip()
+            if len(speaker) < 30:  # Reasonable speaker name length
+                speaker_lines[speaker] = speaker_lines.get(speaker, 0) + 1
+    
+    total_lines = sum(speaker_lines.values()) if speaker_lines else 1
+    speaker_percentages = {k: round((v/total_lines)*100) for k, v in speaker_lines.items()}
+    top_speakers = sorted(speaker_percentages.items(), key=lambda x: x[1], reverse=True)[:3]
+    speaker_dist = ', '.join([f"{name}: {pct}%" for name, pct in top_speakers]) if top_speakers else "Unknown"
+    
+    prompt = f"""Write a 2-sentence meeting autopsy. Be direct and slightly uncomfortable.
+Explain specifically why this meeting failed based on:
+- Speaking time distribution: {speaker_dist}
+- Action items with no owner: {unowned_count} of {total_actions}
+- Decisions made: {decision_count}
+- Meeting duration: {duration_minutes} minutes
+- Duplicate items: {duplicate_count}
+
+Format: 'Cause of death: [one sentence]. Prescription: [one sentence].'
+
+Example: "Cause of death: Three people spoke for 85% of the time while five action items were assigned to 'Unassigned.' Prescription: Assign owners before leaving the room."
+"""
+    
+    models = [
+        ('anthropic.claude-3-haiku-20240307-v1:0', 'anthropic'),
+        ('apac.amazon.nova-lite-v1:0', 'nova'),
+        ('apac.amazon.nova-micro-v1:0', 'nova'),
+    ]
+    
+    for model_id, model_type in models:
+        max_retries = 2
+        base_delay = 2
+        
+        for attempt in range(max_retries):
+            try:
+                if model_type == 'anthropic':
+                    body = json.dumps({
+                        'anthropic_version': 'bedrock-2023-05-31',
+                        'max_tokens': 300,
+                        'messages': [{'role': 'user', 'content': prompt}]
+                    })
+                else:
+                    body = json.dumps({
+                        'messages': [{'role': 'user', 'content': [{'text': prompt}]}],
+                        'inferenceConfig': {'maxTokens': 300, 'temperature': 0.3}
+                    })
+                
+                resp = bedrock.invoke_model(modelId=model_id, body=body)
+                result = json.loads(resp['body'].read())
+                
+                if model_type == 'anthropic':
+                    autopsy = result['content'][0]['text'].strip()
+                else:
+                    autopsy = result['output']['message']['content'][0]['text'].strip()
+                
+                print(f"Generated autopsy with {model_id}")
+                return autopsy
+                
+            except Exception as e:
+                error_str = str(e)
+                if 'ThrottlingException' in error_str or 'TooManyRequestsException' in error_str:
+                    if attempt < max_retries - 1:
+                        delay = base_delay * (2 ** attempt)
+                        print(f"Autopsy generation throttled, retrying in {delay}s")
+                        time.sleep(delay)
+                        continue
+                print(f"Autopsy generation failed with {model_id}: {e}")
+                break
+    
+    # Fallback autopsy if Bedrock fails
+    if is_ghost:
+        return "Cause of death: Zero decisions and zero action items extracted from this meeting. Prescription: Require clear agenda with expected outcomes before scheduling."
+    elif unowned_count > total_actions * 0.5:
+        return f"Cause of death: {unowned_count} of {total_actions} action items have no owner. Prescription: Assign explicit owners before ending the meeting."
+    else:
+        return f"Cause of death: Meeting health score of {health_score}/100 indicates poor execution. Prescription: Review action clarity, ownership, and decision-making process."
+
+
 def _days_from_now(n):
     return (datetime.now(timezone.utc) + timedelta(days=n)).strftime('%Y-%m-%d')
+
 
 def _calculate_risk_score(action, created_at):
     """
@@ -300,7 +470,8 @@ def _generate_embedding(text):
         result = json.loads(response['body'].read())
         embedding = result['embedding']
         print(f"Generated Bedrock embedding: {len(embedding)} dimensions")
-        return embedding
+        # Convert floats to Decimal for DynamoDB compatibility
+        return [Decimal(str(float(v))) for v in embedding]
     except Exception as e:
         print(f"Bedrock embedding failed: {e} — using mock embedding")
         # Mock embedding: simple hash-based vector (1536 dimensions like Titan)
@@ -522,9 +693,24 @@ def lambda_handler(event, context):
 
         # Calculate meeting ROI
         roi_data = _calculate_meeting_roi(action_items, analysis.get('decisions', []))
+        
+        # Calculate health score
+        health_data = _calculate_health_score(action_items, analysis.get('decisions', []), created_at)
+        
+        # Generate autopsy for failed meetings (D/F grades or ghost meetings)
+        autopsy = None
+        is_ghost = len(analysis.get('decisions', [])) == 0 and len(action_items) == 0
+        if health_data['score'] < 65 or is_ghost:
+            with xray_recorder.capture('generate_autopsy'):
+                autopsy = _generate_autopsy(
+                    action_items,
+                    analysis.get('decisions', []),
+                    transcript_text,
+                    health_data['score']
+                )
 
         # DONE
-        _update(table, user_id, meeting_id, 'DONE', {
+        done_data = {
             'title':       title,
             'email':       email,
             's3Key':       s3_key,
@@ -534,7 +720,17 @@ def lambda_handler(event, context):
             'actionItems': action_items,
             'followUps':   analysis.get('follow_ups',[]),
             'roi':         roi_data,
-        })
+            'healthScore': health_data['score'],  # Already a Decimal from _calculate_health_score
+            'healthGrade': health_data['grade'],
+            'healthLabel': health_data['label'],
+            'isGhost':     is_ghost,
+        }
+        
+        if autopsy:
+            done_data['autopsy'] = autopsy
+            done_data['autopsyGeneratedAt'] = datetime.now(timezone.utc).isoformat()
+        
+        _update(table, user_id, meeting_id, 'DONE', done_data)
 
         # Send success email notification
         with xray_recorder.capture('send_email_notification'):

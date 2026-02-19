@@ -211,6 +211,17 @@ export default function Dashboard() {
                 const cfg  = STATUS[m.status] || STATUS.PENDING
                 const done = m.status === 'DONE'
                 const date = fmtDate(m.createdAt || m.updatedAt)
+                
+                // Health grade colors
+                const gradeColors = {
+                  'A': '#10b981',
+                  'B': '#c8f04a',
+                  'C': '#f59e0b',
+                  'D': '#f97316',
+                  'F': '#ef4444'
+                }
+                const gradeColor = gradeColors[m.healthGrade] || '#6b7260'
+                
                 return (
                   <li key={m.meetingId} className="mrow"
                     onClick={() => done && navigate(`/meeting/${m.meetingId}`)}
@@ -219,7 +230,19 @@ export default function Dashboard() {
                       animationDelay:`${i*0.06}s`}}>
                     <div style={s.rowTop}>
                       <span style={s.rowTitle}>{m.title}</span>
-                      {done && <span className="rowarr" style={s.rowArr}>→</span>}
+                      <div style={{display:'flex', alignItems:'center', gap:8}}>
+                        {done && m.isGhost && (
+                          <span style={s.ghostBadge}>
+                            👻 GHOST
+                          </span>
+                        )}
+                        {done && m.healthGrade && (
+                          <span style={{...s.healthBadge, background: gradeColor}}>
+                            {m.healthGrade}
+                          </span>
+                        )}
+                        {done && <span className="rowarr" style={s.rowArr}>→</span>}
+                      </div>
                     </div>
                     <div style={s.rowBot}>
                       <span style={{...s.rowStatus, color: cfg.color}}>● {cfg.label}</span>
@@ -227,6 +250,9 @@ export default function Dashboard() {
                     </div>
                     {m.summary && (
                       <p style={s.rowSumm}>{m.summary.slice(0,110)}…</p>
+                    )}
+                    {done && m.healthLabel && (
+                      <p style={s.healthLabel}>{m.healthLabel}</p>
                     )}
                     {['TRANSCRIBING','ANALYZING'].includes(m.status) && (
                       <div style={s.progTrack}>
@@ -431,6 +457,14 @@ const s = {
   rowDate:  {fontSize:10, color:'#6b7260', letterSpacing:'0.05em'},
   rowSumm:  {fontSize:11, color:'#6b7260', marginTop:10, lineHeight:1.6,
              borderTop:'1px solid #2a2a20', paddingTop:10},
+  healthBadge:{fontFamily:"'Playfair Display',serif", fontSize:16, fontWeight:900,
+               color:'#0c0c09', padding:'2px 10px', borderRadius:4,
+               display:'inline-block', lineHeight:1.2},
+  ghostBadge:{fontSize:10, letterSpacing:'0.1em', color:'#8a8a74',
+              background:'#1a1a16', border:'1px solid #3a3a2e',
+              padding:'3px 8px', borderRadius:3, display:'inline-block'},
+  healthLabel:{fontSize:10, color:'#8a8a74', marginTop:8, letterSpacing:'0.05em',
+               fontStyle:'italic'},
   progTrack:{height:2, background:'#2a2a20', borderRadius:1, marginTop:10},
   progFill: {height:'100%', background:'#c8f04a', borderRadius:1, transition:'width 1s ease'},
   fGroup:{marginBottom:18},

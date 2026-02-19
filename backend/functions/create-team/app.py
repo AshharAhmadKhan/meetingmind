@@ -10,7 +10,7 @@ dynamodb = boto3.resource('dynamodb')
 TEAMS_TABLE = os.environ['TEAMS_TABLE']
 
 CORS_HEADERS = {
-    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Origin': 'https://dcfx593ywvy92.cloudfront.net',
     'Access-Control-Allow-Headers': 'Content-Type,Authorization',
     'Access-Control-Allow-Methods': 'POST,OPTIONS',
     'Content-Type': 'application/json'

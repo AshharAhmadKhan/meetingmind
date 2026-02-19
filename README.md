@@ -1,142 +1,199 @@
-# MeetingMind
+# 🪦 MeetingMind
 
-AI-powered meeting intelligence platform that transforms audio into actionable insights. Built on AWS serverless architecture.
+**AI-Powered Meeting Intelligence Platform**  
+*Where forgotten action items go to die*
 
-**Live Demo:** https://dcfx593ywvy92.cloudfront.net
+[![AWS](https://img.shields.io/badge/AWS-14_Services-FF9900?logo=amazon-aws)](https://aws.amazon.com)
+[![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python)](https://www.python.org)
+[![React](https://img.shields.io/badge/React-19-61DAFB?logo=react)](https://react.dev)
+[![Competition](https://img.shields.io/badge/AWS_AIdeas-2026-FF9900)](https://aws.amazon.com)
 
-## What It Does
+> Transform meeting chaos into organizational memory. Upload audio, get AI-extracted decisions, action items, and risk predictions. Built entirely on AWS serverless.
 
-- Transcribes meeting audio with speaker identification
-- Extracts decisions, action items, and follow-ups using AI
-- Tracks action item completion with risk prediction
-- Detects duplicate work across meetings
-- Identifies toxic meeting patterns
-- Calculates meeting ROI and debt
+**🌐 Live Demo:** [dcfx593ywvy92.cloudfront.net](https://dcfx593ywvy92.cloudfront.net)
 
-## Quick Start
+---
+
+## ✨ Key Features
+
+### 🎯 The Graveyard (Our Killer Feature)
+Action items abandoned for >30 days go to the "Graveyard" with tombstones showing how long they've been buried. Accountability through shame.
+
+### 🤖 AI-Powered Intelligence
+- **Transcription:** Amazon Transcribe with speaker diarization
+- **Analysis:** Multi-model fallback (Claude Haiku → Nova Lite → Nova Micro)
+- **Duplicate Detection:** Semantic search with Titan Embeddings (1536-dim)
+- **Risk Prediction:** 4-factor algorithm (deadline, owner, vagueness, staleness)
+
+### 📊 Analytics & Insights
+- **Meeting Debt:** Calculate $ cost of incomplete actions ($75/hour × 3.2 hours blocked)
+- **Pattern Detection:** 5 toxic patterns (Planning Paralysis, Action Item Amnesia, etc.)
+- **Team Leaderboard:** Weighted scoring with achievements (🏆 Perfectionist, ⚡ Speed Demon)
+- **Completion Tracking:** Real-time progress vs industry benchmark (67%)
+
+### 🎨 Beautiful UI
+- Dark charcoal + lime green design system
+- Playfair Display + DM Mono typography
+- Drag-and-drop Kanban board
+- Grain texture overlay for depth
+
+---
+
+## 🏗️ Architecture
+
+**14 AWS Services | 18 Lambda Functions | 100% Serverless**
+
+```
+Audio Upload → S3 → SQS → Lambda → Transcribe → Bedrock → DynamoDB → SES
+                                      ↓
+                                  CloudFront ← React SPA
+```
+
+### Tech Stack
+- **Frontend:** React 19, Vite, React Router, AWS Amplify, React DnD
+- **Backend:** Python 3.11, AWS SAM, Boto3
+- **AI/ML:** Amazon Transcribe, Bedrock (Claude/Nova/Titan)
+- **Data:** DynamoDB (pay-per-request), S3 (encrypted)
+- **Auth:** Cognito (JWT tokens)
+- **Notifications:** SES (email), SNS (reminders), EventBridge (cron)
+- **Monitoring:** CloudWatch (12 alarms), X-Ray (tracing)
+
+### AWS Services
+S3 • Lambda • API Gateway • DynamoDB • Cognito • Transcribe • Bedrock • SES • SNS • SQS • EventBridge • CloudFront • CloudWatch • X-Ray
+
+---
+
+## 🚀 Quick Start
 
 ### Prerequisites
-
-- AWS Account with credits activated
+- AWS Account with Bedrock access
 - AWS CLI configured
-- SAM CLI installed
-- Node.js 18+ and npm
+- Python 3.11+
+- Node.js 18+
+- AWS SAM CLI
 
-### Deploy Backend
-
+### Backend Deployment
 ```bash
 cd backend
 sam build
-sam deploy --stack-name meetingmind-backend --capabilities CAPABILITY_IAM --resolve-s3
+sam deploy --guided
 ```
 
-### Deploy Frontend
-
+### Frontend Deployment
 ```bash
 cd frontend
+cp .env.example .env.production
+# Edit .env.production with your API Gateway URL and Cognito IDs
 npm install
 npm run build
-aws s3 sync dist/ s3://meetingmind-frontend-707411439284 --delete
-aws cloudfront create-invalidation --distribution-id E3CAAI97MXY83V --paths "/*"
+aws s3 sync dist/ s3://YOUR_FRONTEND_BUCKET --delete
+aws cloudfront create-invalidation --distribution-id YOUR_DIST_ID --paths "/*"
 ```
 
-## Architecture
+**📖 Detailed Instructions:** See [`docs/DEPLOY.md`](docs/DEPLOY.md)
 
-**AWS Services:** S3, Lambda, API Gateway, Transcribe, Bedrock, DynamoDB, Cognito, CloudFront, SES, SNS, EventBridge
+---
 
-**Frontend:** React 18 + Vite + React Router  
-**Backend:** Python 3.11 + AWS SAM  
-**AI:** Amazon Bedrock (Claude Haiku, Nova Lite, Nova Micro)
-
-## Key Features
-
-- **Kanban Board:** Drag-and-drop action item management
-- **Risk Prediction:** AI-powered risk scores for each action item
-- **Duplicate Detection:** Semantic similarity using embeddings
-- **Meeting Debt:** Quantify cost of incomplete work
-- **Pattern Analysis:** Identify toxic meeting patterns
-- **Team Leaderboard:** Gamification with achievements
-
-## Project Structure
+## 📁 Project Structure
 
 ```
 meetingmind/
-├── backend/              # AWS SAM application
-│   ├── functions/        # Lambda functions
-│   ├── template.yaml     # Infrastructure as code
-│   └── tests/            # Backend tests
-├── frontend/             # React application
+├── backend/
+│   ├── functions/          # 18 Lambda functions
+│   │   ├── process-meeting/    # Main AI pipeline
+│   │   ├── get-all-actions/    # Action aggregation
+│   │   ├── check-duplicate/    # Semantic search
+│   │   └── ...
+│   ├── template.yaml       # SAM infrastructure
+│   └── tests/              # Unit tests
+├── frontend/
 │   ├── src/
-│   │   ├── components/   # React components
-│   │   ├── pages/        # Page components
-│   │   └── utils/        # API client & auth
-│   └── dist/             # Build output
-├── scripts/              # Utility scripts
-├── docs/                 # Documentation
-└── COMMANDS.md           # Deployment commands reference
+│   │   ├── components/     # Kanban, Leaderboard, Patterns
+│   │   ├── pages/          # Dashboard, Graveyard, Debt
+│   │   └── utils/          # API client, auth
+│   ├── .env.example        # Environment template
+│   └── package.json
+├── docs/                   # Documentation
+│   ├── ARCHITECTURE.md     # Technical deep-dive
+│   ├── FEATURES.md         # Feature documentation
+│   ├── DEPLOY.md           # Deployment guide
+│   └── PROJECT_BOOTSTRAP.md # Single source of truth
+├── scripts/                # Utility scripts
+└── README.md               # You are here
 ```
 
-## Documentation
+---
 
-- [COMMANDS.md](COMMANDS.md) - All deployment and testing commands
-- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) - Technical architecture details
-- [docs/FEATURES.md](docs/FEATURES.md) - Feature documentation
-- [scripts/README.md](scripts/README.md) - Utility scripts guide
+## 📚 Documentation
 
-## Development
+| Document | Description |
+|----------|-------------|
+| [`AI_AGENT_HANDBOOK.md`](AI_AGENT_HANDBOOK.md) | **🤖 For AI Agents** - Essential rules, architecture, common issues |
+| [`docs/PROJECT_BOOTSTRAP.md`](docs/PROJECT_BOOTSTRAP.md) | **Single source of truth** - Start here |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Technical architecture deep-dive |
+| [`docs/FEATURES.md`](docs/FEATURES.md) | Feature documentation |
+| [`DEPLOY.md`](DEPLOY.md) | Deployment guide |
+| [`docs/TESTING.md`](docs/TESTING.md) | Testing procedures |
 
-### Backend
+---
 
-```bash
-cd backend
-sam build
-sam local start-api  # Test locally
-```
+## 🎯 Competition
 
-### Frontend
+**AWS AIdeas Competition 2026**
+- **Category:** AI-Powered Productivity Tools
+- **Timeline:** March 1-13 (article submission), March 13-20 (voting)
+- **Goal:** Top 300 by community likes
 
-```bash
-cd frontend
-npm run dev  # Development server on http://localhost:5173
-```
+**Our Differentiators:**
+1. The Graveyard (unique shame mechanic)
+2. Meeting debt quantification ($ value)
+3. Pattern detection (statistical insights)
+4. Production-ready (88/100 score)
 
-## Testing
+---
 
-```bash
-# Test AWS services
-python scripts/test-aws-services.py
+## 🤝 Contributing
 
-# Test duplicate detection
-python scripts/test-duplicate-detection.py
+This is a competition entry, but feedback is welcome!
 
-# Comprehensive test suite
-python scripts/comprehensive-test-suite.py
-```
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-## Configuration
+---
 
-### AWS Resources
+## 📊 Status
 
-- **Region:** ap-south-1 (Mumbai)
-- **Stack:** meetingmind-backend
-- **S3 Bucket:** meetingmind-frontend-707411439284
-- **CloudFront:** E3CAAI97MXY83V
-- **User Pool:** ap-south-1_mkFJawjMp
+**Production Readiness:** 88/100  
+**Feature Completeness:** 100% (all 11 core features working)  
+**Test Coverage:** 28% backend, 0% frontend (improving)  
+**Last Updated:** February 19, 2026 - 5:17 PM IST
 
-### Environment Variables
+**Recent Updates:**
+- ✅ AI Epitaph generation for Graveyard (DEPLOYED)
+- ✅ Kanban Board UI fixes (4 bugs fixed)
+- ✅ PowerShell deployment script added
+- ✅ Frontend deployed successfully
+- ✅ CloudFront cache invalidated
 
-Backend Lambda functions use these environment variables (set in template.yaml):
-- `MEETINGS_TABLE`: meetingmind-meetings
-- `TEAMS_TABLE`: meetingmind-teams
-- `AUDIO_BUCKET`: meetingmind-audio-707411439284
-- `FRONTEND_URL`: https://dcfx593ywvy92.cloudfront.net
-- `SES_FROM_EMAIL`: thecyberprinciples@gmail.com
-- `REGION`: ap-south-1
+---
 
-## License
+## 📞 Contact
 
-MIT
+**Email:** thecyberprinciples@gmail.com  
+**AWS Account:** 707411439284  
+**Region:** ap-south-1 (Mumbai)
 
-## Contact
+---
 
-Built for AWS AIdeas Competition 2026
+## 📄 License
+
+MIT License - see LICENSE file for details
+
+---
+
+**Built with ❤️ using AWS Serverless**
+
+*Transforming meeting chaos into organizational memory, one tombstone at a time.*

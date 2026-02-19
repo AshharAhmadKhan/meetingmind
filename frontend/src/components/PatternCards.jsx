@@ -256,6 +256,44 @@ function detectPatterns(meetings, actions) {
     })
   }
   
+  // Pattern 6: Ghost Meeting (zero output meetings)
+  const ghostMeetings = recentMeetings.filter(m => {
+    const meetingActions = recentActions.filter(a => a.meetingId === m.meetingId)
+    const decisions = m.decisions || []
+    return decisions.length === 0 && meetingActions.length === 0
+  })
+  
+  if (ghostMeetings.length >= 2) {
+    // Calculate cost: assume 5 attendees, 1 hour, $75/hour per person
+    const avgAttendeesPerMeeting = 5
+    const avgDurationHours = 1
+    const costPerPersonPerHour = 75
+    const totalCost = ghostMeetings.length * avgAttendeesPerMeeting * avgDurationHours * costPerPersonPerHour
+    
+    const ghostRate = (ghostMeetings.length / recentMeetings.length) * 100
+    
+    patterns.push({
+      id: 'ghost-meeting',
+      name: 'Ghost Meeting',
+      icon: '👻',
+      severity: 'high',
+      color: '#8a8a74',
+      symptoms: [
+        `${ghostMeetings.length} meetings with zero decisions AND zero actions`,
+        `${Math.round(ghostRate)}% of meetings produced nothing`,
+        `Estimated cost: $${totalCost.toLocaleString()} in wasted time`
+      ],
+      prescription: [
+        'Require agenda with clear objectives before meeting',
+        'Cancel meetings that could be emails',
+        'End meetings early if objectives are met',
+        'Track meeting ROI: output value vs time cost'
+      ],
+      confidence: Math.min(ghostMeetings.length / 5, 1),
+      basedOn: sampleSize
+    })
+  }
+  
   return patterns
 }
 

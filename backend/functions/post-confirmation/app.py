@@ -1,5 +1,7 @@
 import boto3
 import os
+import json
+from decimal import Decimal
 
 cognito = boto3.client('cognito-idp')
 ses = boto3.client('ses')
@@ -7,12 +9,30 @@ USER_POOL_ID = os.environ['USER_POOL_ID']
 ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', 'itzashhar@gmail.com')
 SES_FROM_EMAIL = os.environ.get('SES_FROM_EMAIL', 'thecyberprinciples@gmail.com')
 
+CORS_HEADERS = {
+    'Access-Control-Allow-Origin': 'https://dcfx593ywvy92.cloudfront.net',
+    'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+    'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
+    'Content-Type': 'application/json'
+}
+
+
+def decimal_to_float(obj):
+    """Convert Decimal to float for JSON serialization"""
+    if isinstance(obj, Decimal):
+        return float(obj)
+    raise TypeError
+
 def lambda_handler(event, context):
     """
     Cognito Post-Confirmation trigger
     Disables user immediately after signup - they must be manually approved
     Sends notification email to admin
     """
+    # Handle CORS preflight
+    if event.get('httpMethod') == 'OPTIONS':
+        return {'statusCode': 200, 'headers': CORS_HEADERS, 'body': ''}
+    
     username = event['userName']
     user_email = event['request']['userAttributes'].get('email', 'unknown')
     

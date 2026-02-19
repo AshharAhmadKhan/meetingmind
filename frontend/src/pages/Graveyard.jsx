@@ -180,6 +180,11 @@ export default function Graveyard() {
                     <p style={s.tombEpitaph}>Here lies</p>
                     <p style={s.tombTask}>{action.task}</p>
                     
+                    {/* AI-Generated Epitaph */}
+                    {action.epitaph && (
+                      <p style={s.aiEpitaph}>{action.epitaph}</p>
+                    )}
+                    
                     <div style={s.tombMeta}>
                       <div style={s.tombMetaRow}>
                         <span style={s.tombLabel}>Owner:</span>
@@ -341,6 +346,8 @@ const s = {
                textTransform:'uppercase', marginBottom:8},
   tombTask:{fontSize:14, color:'#e8e4d0', marginBottom:16, lineHeight:1.5,
             fontStyle:'italic'},
+  aiEpitaph:{fontSize:12, color:'#8a8a74', marginBottom:16, lineHeight:1.6,
+             fontStyle:'italic', paddingLeft:12, borderLeft:'2px solid #3a3a2e'},
   tombMeta:{display:'flex', flexDirection:'column', gap:6,
             paddingTop:12, borderTop:'1px solid #2a2a20'},
   tombMetaRow:{display:'flex', justifyContent:'space-between', alignItems:'center'},

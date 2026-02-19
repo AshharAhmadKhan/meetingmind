@@ -2,6 +2,7 @@ import json
 import boto3
 import os
 from datetime import datetime, timezone
+from decimal import Decimal
 
 REGION = os.environ.get('REGION', 'ap-south-1')
 TABLE_NAME = os.environ.get('MEETINGS_TABLE', 'meetingmind-meetings')
@@ -11,12 +12,30 @@ FRONTEND_URL = os.environ.get('FRONTEND_URL', 'https://dcfx593ywvy92.cloudfront.
 dynamodb = boto3.resource('dynamodb', region_name=REGION)
 ses = boto3.client('ses', region_name=REGION)
 
+CORS_HEADERS = {
+    'Access-Control-Allow-Origin': 'https://dcfx593ywvy92.cloudfront.net',
+    'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+    'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
+    'Content-Type': 'application/json'
+}
+
+
+def decimal_to_float(obj):
+    """Convert Decimal to float for JSON serialization"""
+    if isinstance(obj, Decimal):
+        return float(obj)
+    raise TypeError
+
 
 def lambda_handler(event, context):
     """
     Handle failed meeting processing from Dead Letter Queue.
     Send notification email to user about the failure.
     """
+    # Handle CORS preflight
+    if event.get('httpMethod') == 'OPTIONS':
+        return {'statusCode': 200, 'headers': CORS_HEADERS, 'body': ''}
+    
     print("DLQ Event:", json.dumps(event))
     
     try:
@@ -59,7 +78,8 @@ def lambda_handler(event, context):
         
         return {
             'statusCode': 200,
-            'body': json.dumps({'message': 'DLQ processed', 'meetingId': meeting_id})
+            'headers': CORS_HEADERS,
+            'body': json.dumps({'message': 'DLQ processed', 'meetingId': meeting_id}, default=decimal_to_float)
         }
         
     except Exception as e:
@@ -68,7 +88,8 @@ def lambda_handler(event, context):
         traceback.print_exc()
         return {
             'statusCode': 500,
-            'body': json.dumps({'error': str(e)})
+            'headers': CORS_HEADERS,
+            'body': json.dumps({'error': str(e)}, default=decimal_to_float)
         }
 
 

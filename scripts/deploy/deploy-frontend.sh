@@ -1,7 +1,9 @@
 #!/bin/bash
 
-# MeetingMind Frontend Deployment Script
+# MeetingMind Frontend Deployment Script (Bash/Linux/Mac)
 # Deploys the React frontend to S3 and invalidates CloudFront cache
+# 
+# For Windows PowerShell, use: deploy-frontend.ps1
 
 set -e
 

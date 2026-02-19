@@ -11,11 +11,29 @@ MEETINGS_TABLE = os.environ['MEETINGS_TABLE']
 SES_FROM_EMAIL = os.environ['SES_FROM_EMAIL']
 FRONTEND_URL = os.environ['FRONTEND_URL']
 
+CORS_HEADERS = {
+    'Access-Control-Allow-Origin': 'https://dcfx593ywvy92.cloudfront.net',
+    'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+    'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
+    'Content-Type': 'application/json'
+}
+
+
+def decimal_to_float(obj):
+    """Convert Decimal to float for JSON serialization"""
+    if isinstance(obj, Decimal):
+        return float(obj)
+    raise TypeError
+
 def lambda_handler(event, context):
     """
     Daily digest email sent to all users with incomplete action items
     Triggered by EventBridge at 9 AM daily
     """
+    # Handle CORS preflight
+    if event.get('httpMethod') == 'OPTIONS':
+        return {'statusCode': 200, 'headers': CORS_HEADERS, 'body': ''}
+    
     print("Running daily digest...")
     
     # Get all users with incomplete actions
@@ -56,7 +74,11 @@ def lambda_handler(event, context):
             print(f"Failed to send digest to {user_data['email']}: {e}")
     
     print(f"✅ Sent {sent_count} daily digests")
-    return {'statusCode': 200, 'body': f'Sent {sent_count} digests'}
+    return {
+        'statusCode': 200,
+        'headers': CORS_HEADERS,
+        'body': json.dumps({'message': f'Sent {sent_count} digests'}, default=decimal_to_float)
+    }
 
 
 def calculate_digest(meetings):

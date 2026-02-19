@@ -1,24 +1,65 @@
+# Dependencies
 node_modules/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Environment variables
 .env
 .env.local
-__pycache__/
-.aws-sam/
-samconfig.toml
-*.zip
+.env.production.local
+.env.development.local
+.env.test.local
 
 # Build outputs
 frontend/dist/
+frontend/build/
 backend/.aws-sam/
+backend/build/
+*.zip
+backend/*.zip
+backend/functions/*/*.zip
+
+# AWS SAM
+.aws-sam/
+samconfig.toml
 
 # IDE
 .vscode/
 .idea/
+*.swp
+*.swo
+*~
 
 # OS
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
 
-# Temporary files
+# Logs
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Temporary files
 *.tmp
+*.temp
 response.json
+.cache/
+
+# Testing
+coverage/
+.nyc_output/
+*.test.js.snap
+
+# Misc
+.serverless/
+.webpack/

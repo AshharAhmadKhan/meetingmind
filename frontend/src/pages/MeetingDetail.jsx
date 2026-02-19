@@ -319,6 +319,19 @@ export default function MeetingDetail() {
         )}
       </div>
 
+      {/* AUTOPSY CARD - Only show for D/F grades or ghost meetings */}
+      {meeting.autopsy && (meeting.healthGrade === 'D' || meeting.healthGrade === 'F' || meeting.isGhost) && (
+        <div style={s.autopsySection}>
+          <div style={s.autopsyCard}>
+            <div style={s.autopsyHeader}>
+              <span style={s.autopsyIcon}>🔬</span>
+              <h3 style={s.autopsyTitle}>Meeting Autopsy</h3>
+            </div>
+            <p style={s.autopsyText}>{meeting.autopsy}</p>
+          </div>
+        </div>
+      )}
+
       {/* CHARTS ROW */}
       <div style={s.chartsRow}>
 
@@ -614,4 +627,13 @@ const s = {
              animation:'fadeUp 0.3s ease both' },
   dn:      { fontFamily:"'Playfair Display',serif", fontSize:20, fontWeight:700,
              color:'#3a3a2e', lineHeight:1, flexShrink:0, marginTop:2 },
+  
+  autopsySection: { padding:'24px 36px', borderBottom:'1px solid #2a2a20' },
+  autopsyCard: { background:'#1a0e0e', border:'2px solid #e87a6a', borderRadius:8,
+                 padding:'20px 24px' },
+  autopsyHeader: { display:'flex', alignItems:'center', gap:12, marginBottom:14 },
+  autopsyIcon: { fontSize:24, lineHeight:1 },
+  autopsyTitle: { fontFamily:"'Playfair Display',serif", fontSize:16, fontWeight:700,
+                  color:'#e87a6a', letterSpacing:'-0.2px' },
+  autopsyText: { fontSize:13, color:'#c8c4b0', lineHeight:1.75, letterSpacing:'0.01em' },
 }

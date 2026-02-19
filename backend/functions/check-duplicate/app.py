@@ -8,6 +8,13 @@ from decimal import Decimal
 REGION = os.environ.get('REGION', 'ap-south-1')
 TABLE_NAME = os.environ.get('MEETINGS_TABLE', 'meetingmind-meetings')
 
+CORS_HEADERS = {
+    'Access-Control-Allow-Origin': 'https://dcfx593ywvy92.cloudfront.net',
+    'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+    'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
+    'Content-Type': 'application/json'
+}
+
 # CRITICAL: Disable retries for Bedrock to prevent repeated Marketplace subscription triggers
 # Each retry was causing a new subscription validation attempt
 bedrock_config = Config(
@@ -183,6 +190,10 @@ def lambda_handler(event, context):
     POST /check-duplicate
     Body: {"task": "Finalize API documentation"}
     """
+    # Handle CORS preflight
+    if event.get('httpMethod') == 'OPTIONS':
+        return {'statusCode': 200, 'headers': CORS_HEADERS, 'body': ''}
+    
     print("Event:", json.dumps(event, default=str))
     
     try:
@@ -193,8 +204,8 @@ def lambda_handler(event, context):
         if not task:
             return {
                 'statusCode': 400,
-                'headers': {'Content-Type': 'application/json'},
-                'body': json.dumps({'error': 'Task text required'})
+                'headers': CORS_HEADERS,
+                'body': json.dumps({'error': 'Task text required'}, default=decimal_to_float)
             }
         
         # Get user ID from Cognito token
@@ -205,10 +216,7 @@ def lambda_handler(event, context):
         
         return {
             'statusCode': 200,
-            'headers': {
-                'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*'
-            },
+            'headers': CORS_HEADERS,
             'body': json.dumps(result, default=decimal_to_float)
         }
         
@@ -217,6 +225,6 @@ def lambda_handler(event, context):
         traceback.print_exc()
         return {
             'statusCode': 500,
-            'headers': {'Content-Type': 'application/json'},
-            'body': json.dumps({'error': str(e)})
+            'headers': CORS_HEADERS,
+            'body': json.dumps({'error': str(e)}, default=decimal_to_float)
         }
