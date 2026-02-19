@@ -106,7 +106,19 @@ function calculateStats(actions) {
   
   // Convert to array and sort by weighted score
   const leaderboard = Object.values(byOwner)
-    .filter(s => s.ownerId !== 'unassigned') // Exclude unassigned
+    .filter(s => {
+      const owner = s.ownerId.toLowerCase()
+      // Exclude unassigned
+      if (owner === 'unassigned') return false
+      // Exclude entries that look like task descriptions (contain common task words)
+      const taskWords = ['person who', 'responsible for', 'will write', 'will handle', 'will do', 'someone to', "i'll do", "i will", "someone", "person"]
+      if (taskWords.some(word => owner.includes(word))) return false
+      // Exclude very long names (likely descriptions, not names)
+      if (s.owner.length > 30) return false
+      // Exclude very short names (likely incomplete)
+      if (s.owner.length < 3) return false
+      return true
+    })
     .sort((a, b) => {
       // Primary: Weighted score
       if (Math.abs(b.weightedScore - a.weightedScore) > 0.01) {

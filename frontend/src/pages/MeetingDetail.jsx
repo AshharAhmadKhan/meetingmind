@@ -320,14 +320,33 @@ export default function MeetingDetail() {
             <p style={s.chartLabel}>TASK DISTRIBUTION</p>
             <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
               {(() => {
-                // Group actions by owner
+                // Helper function to check if owner name is valid
+                const isValidOwner = (owner) => {
+                  if (!owner || owner === 'Unassigned') return false
+                  const ownerLower = owner.toLowerCase()
+                  // Exclude task-like descriptions
+                  const taskWords = ['person who', 'responsible for', 'will write', 
+                                     'will handle', 'will do', 'someone to', 
+                                     "i'll do", "i will", "someone", "person"]
+                  if (taskWords.some(word => ownerLower.includes(word))) return false
+                  // Exclude very long names (over 30 chars = likely descriptions)
+                  if (owner.length > 30) return false
+                  // Exclude very short names (under 3 chars = incomplete)
+                  if (owner.length < 3) return false
+                  return true
+                }
+                
+                // Group actions by owner (only valid owners)
                 const ownerCounts = {}
                 actions.forEach(a => {
-                  if (a.owner && a.owner !== 'Unassigned') {
+                  if (isValidOwner(a.owner)) {
                     ownerCounts[a.owner] = (ownerCounts[a.owner] || 0) + 1
                   }
                 })
                 const total = Object.values(ownerCounts).reduce((sum, count) => sum + count, 0)
+                
+                // If no valid owners, don't show the chart
+                if (total === 0) return null
                 
                 return Object.entries(ownerCounts)
                   .sort((a, b) => b[1] - a[1])

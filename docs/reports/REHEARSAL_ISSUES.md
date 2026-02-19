@@ -455,19 +455,21 @@ These issues require re-recording with explicit name mentions:
   - Check update-action API endpoint
   - Test in browser console for errors
 
-### Issue 19: Leaderboard Shows Task Names Instead of People
+### Issue 19: Leaderboard Shows Task Names Instead of People ✅ RESOLVED
 - **Severity:** HIGH (feature broken)
-- **Description:** Leaderboard displays task names ("handle file testing", "final testing", "write article draft") instead of team member names with completion rates
-- **Expected:** Should show:
-  ```
-  🥇 Zeeshan  100%  (5/5)  ⚡🏆
-  🥈 Alishba   60%  (3/5)
-  🥉 Aayush    67%  (2/3)
-  ```
-- **Current:** Shows random task names as if they were people
-- **Impact:** Core accountability feature is completely broken and confusing
-- **Root Cause:** Leaderboard.jsx is aggregating by task name instead of owner name
-- **Fix Required:** Check Leaderboard.jsx data aggregation logic
+- **Status:** ✅ FIXED (February 20, 2026)
+- **Description:** Leaderboard and Task Distribution chart displayed task descriptions instead of team member names
+- **Root Cause:** AI extracted task descriptions like "Person who will write the damn script" into the owner field instead of actual names
+- **Fix Applied:**
+  - Added smart filtering to Leaderboard.jsx to exclude task-like descriptions
+  - Added same filtering to Task Distribution chart in MeetingDetail.jsx
+  - Filters out entries containing: "person who", "will write", "someone", "i'll do", etc.
+  - Filters out very long names (>30 chars) and very short names (<3 chars)
+  - Only shows real person names: Zeeshan, Alishba, Aayush
+- **Files Modified:**
+  - `frontend/src/components/Leaderboard.jsx` - Added owner name validation
+  - `frontend/src/pages/MeetingDetail.jsx` - Added same validation to Task Distribution chart
+- **Verification:** ✅ Both components now show only real team member names
 
 ### Issue 20: Graveyard Has 13 Items (Expected 11 for V1, 0 for V2)
 - **Severity:** MEDIUM (data accuracy)
