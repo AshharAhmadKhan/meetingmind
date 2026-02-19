@@ -135,8 +135,29 @@
   - [ ] 7.5.4 Verify pattern cards display
   - [ ] 7.5.5 Final end-to-end test
 
+## Day 8: Team Meeting Visibility Fix (CRITICAL)
+- [ ] 8.1 Investigate frontend filtering
+  - [ ] 8.1.1 Check Dashboard.jsx for userId filtering
+  - [ ] 8.1.2 Check if meetings array is being filtered client-side
+  - [ ] 8.1.3 Verify API response contains all team meetings
+- [ ] 8.2 Fix frontend display
+  - [ ] 8.2.1 Remove any client-side userId filtering
+  - [ ] 8.2.2 Add "Uploaded by" indicator on meeting cards
+  - [ ] 8.2.3 Add visual distinction for V1 vs V2 teams
+- [ ] 8.3 Test team visibility
+  - [ ] 8.3.1 Login as thehidden account
+  - [ ] 8.3.2 Select "Project V1 - Legacy" team
+  - [ ] 8.3.3 Verify 3 V1 meetings appear
+  - [ ] 8.3.4 Select "Project V2 - Active" team
+  - [ ] 8.3.5 Verify 3 V2 meetings appear
+  - [ ] 8.3.6 Select "Personal" - verify 0 meetings
+- [ ] 8.4 Deploy and verify
+  - [ ] 8.4.1 Deploy frontend changes
+  - [ ] 8.4.2 Clear CloudFront cache
+  - [ ] 8.4.3 Test with all 3 accounts
+
 ## Final Review
-- [ ] 8.1 Complete testing
+- [ ] 9.1 Complete testing
   - [ ] 8.1.1 Test all features work together
   - [ ] 8.1.2 Test mobile responsive
   - [ ] 8.1.3 Test accessibility (keyboard navigation)

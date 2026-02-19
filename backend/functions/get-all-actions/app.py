@@ -150,6 +150,36 @@ def lambda_handler(event, context):
         table = dynamodb.Table(TABLE_NAME)
         
         if team_id:
+            # Validate user is member of the team
+            teams_table = dynamodb.Table(os.environ['TEAMS_TABLE'])
+            team_response = teams_table.get_item(Key={'teamId': team_id})
+            
+            if 'Item' not in team_response:
+                return {
+                    'statusCode': 404,
+                    'headers': CORS_HEADERS,
+                    'body': json.dumps({'error': 'Team not found'})
+                }
+            
+            team = team_response['Item']
+            members = team.get('members', [])
+            
+            # Check if user is a member of the team
+            # Members can be either strings (old format) or dicts (new format)
+            member_ids = []
+            for member in members:
+                if isinstance(member, dict):
+                    member_ids.append(member.get('userId'))
+                else:
+                    member_ids.append(member)
+            
+            if user_id not in member_ids:
+                return {
+                    'statusCode': 403,
+                    'headers': CORS_HEADERS,
+                    'body': json.dumps({'error': 'You are not a member of this team'})
+                }
+            
             # Query by teamId using GSI
             response = table.query(
                 IndexName='teamId-createdAt-index',

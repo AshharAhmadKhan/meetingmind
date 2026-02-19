@@ -149,15 +149,22 @@ export default function TeamSelector({ selectedTeamId, onTeamChange }) {
         onChange={(e) => onTeamChange(e.target.value || null)}
         style={s.select}
       >
-        <option value="">Personal (Just Me)</option>
+        <option value="">📋 Personal (Just Me)</option>
         {teams.length === 0 && (
-          <option disabled>No teams yet</option>
+          <option disabled>No teams yet - create or join one</option>
         )}
-        {teams.map(team => (
-          <option key={team.teamId} value={team.teamId}>
-            {team.teamName} ({team.memberCount} members)
-          </option>
-        ))}
+        {teams.map(team => {
+          // Add emoji indicators for V1/V2 teams
+          const isV1 = team.teamName.includes('V1') || team.teamName.includes('Legacy')
+          const isV2 = team.teamName.includes('V2') || team.teamName.includes('Active')
+          const emoji = isV1 ? '📦' : isV2 ? '🚀' : '👥'
+          
+          return (
+            <option key={team.teamId} value={team.teamId}>
+              {emoji} {team.teamName} ({team.memberCount} {team.memberCount === 1 ? 'member' : 'members'})
+            </option>
+          )
+        })}
       </select>
 
       <button onClick={() => setShowCreateModal(true)} style={s.createBtn}>

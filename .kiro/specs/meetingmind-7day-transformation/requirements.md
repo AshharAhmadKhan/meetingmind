@@ -246,6 +246,36 @@ As a team lead, I want to understand toxic meeting patterns, so I can fix our me
 
 ---
 
+## Day 8: Team Meeting Visibility Fix (CRITICAL)
+
+**Extension of:** "meeting history" + team collaboration
+
+**User Story:**
+As a team member, I want to see all meetings uploaded by my team, not just my own meetings, so I can stay informed about team decisions and action items.
+
+**Acceptance Criteria:**
+1. When a team is selected, show ALL meetings uploaded to that team
+2. When "Personal" is selected, show only meetings without teamId
+3. Team selector clearly distinguishes between V1 and V2 teams
+4. Team members can view (but not edit) meetings uploaded by others
+5. Meeting uploader is clearly indicated on each meeting card
+
+**Technical Requirements:**
+- Backend already queries by teamId (GSI exists)
+- Frontend already passes teamId to API
+- **Problem:** Meetings show in API response but frontend filters them out
+- **Root Cause:** Frontend may be filtering by userId client-side
+- **Fix:** Remove any client-side userId filtering in Dashboard.jsx
+
+**Current Status:**
+- ✅ Backend: list-meetings queries by teamId correctly
+- ✅ DynamoDB: All 6 meetings have teamId
+- ✅ GSI: teamId-createdAt-index exists
+- ❌ Frontend: May be filtering results by userId
+- ❌ UX: No visual distinction between V1/V2 teams
+
+---
+
 ## Out of Scope
 
 ### Explicitly NOT Included (Would violate submission)

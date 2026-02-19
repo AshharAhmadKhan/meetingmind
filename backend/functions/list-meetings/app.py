@@ -92,12 +92,57 @@ def lambda_handler(event, context):
     
     user_id = event['requestContext']['authorizer']['claims']['sub']
     table   = dynamodb.Table(TABLE_NAME)
+    
+    # Get query parameters for team filtering
+    params = event.get('queryStringParameters') or {}
+    team_id = params.get('teamId')
 
-    response = table.query(
-        KeyConditionExpression='userId = :uid',
-        ExpressionAttributeValues={':uid': user_id},
-        ScanIndexForward=False,   # newest first
-    )
+    # Query by teamId if provided, otherwise by userId
+    if team_id:
+        # Validate user is member of the team
+        teams_table = dynamodb.Table(os.environ['TEAMS_TABLE'])
+        team_response = teams_table.get_item(Key={'teamId': team_id})
+        
+        if 'Item' not in team_response:
+            return {
+                'statusCode': 404,
+                'headers': CORS_HEADERS,
+                'body': json.dumps({'error': 'Team not found'})
+            }
+        
+        team = team_response['Item']
+        members = team.get('members', [])
+        
+        # Check if user is a member of the team
+        # Members can be either strings (old format) or dicts (new format)
+        member_ids = []
+        for member in members:
+            if isinstance(member, dict):
+                member_ids.append(member.get('userId'))
+            else:
+                member_ids.append(member)
+        
+        if user_id not in member_ids:
+            return {
+                'statusCode': 403,
+                'headers': CORS_HEADERS,
+                'body': json.dumps({'error': 'You are not a member of this team'})
+            }
+        
+        # Query by teamId using GSI
+        response = table.query(
+            IndexName='teamId-createdAt-index',
+            KeyConditionExpression='teamId = :tid',
+            ExpressionAttributeValues={':tid': team_id},
+            ScanIndexForward=False,   # newest first
+        )
+    else:
+        # Query by userId (personal meetings)
+        response = table.query(
+            KeyConditionExpression='userId = :uid',
+            ExpressionAttributeValues={':uid': user_id},
+            ScanIndexForward=False,   # newest first
+        )
 
     meetings = response.get('Items', [])
     

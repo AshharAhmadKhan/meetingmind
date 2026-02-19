@@ -2,10 +2,6 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { checkSession } from '../utils/auth.js'
 import { getMeeting, updateAction } from '../utils/api.js'
-import {
-  PieChart, Pie, Cell, ResponsiveContainer,
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine
-} from 'recharts'
 
 function fmtDate(iso) {
   if (!iso) return null
@@ -95,25 +91,8 @@ function calcHealthScore(actions, decisions) {
   return Math.round(score * 10) / 10 // Round to 1 decimal
 }
 
-const SPEAKERS = [
-  { name: 'Ashhar', color: '#c8f04a', pct: 42 },
-  { name: 'Priya',  color: '#e8c06a', pct: 35 },
-  { name: 'Zara',   color: '#6ab4e8', pct: 23 },
-]
-
-const SENTIMENT = [
-  { t: '0:00', Ashhar: 65, Priya: 60, Zara: 58 },
-  { t: '5:00', Ashhar: 62, Priya: 55, Zara: 70 },
-  { t: '10:00', Ashhar: 48, Priya: 42, Zara: 45 },
-  { t: '15:00', Ashhar: 38, Priya: 35, Zara: 40 },
-  { t: '20:00', Ashhar: 55, Priya: 58, Zara: 52 },
-  { t: '25:00', Ashhar: 72, Priya: 75, Zara: 68 },
-  { t: '30:00', Ashhar: 85, Priya: 82, Zara: 80 },
-]
-
-const CustomDot = ({ cx, cy, stroke }) => (
-  <circle cx={cx} cy={cy} r={3} fill={stroke} stroke="none" />
-)
+// Mock speaker data removed - Issue #16 fixed
+// Real speaker analytics will be implemented in future version
 
 export default function MeetingDetail() {
   const { meetingId } = useParams()
@@ -332,75 +311,11 @@ export default function MeetingDetail() {
         </div>
       )}
 
-      {/* CHARTS ROW */}
+      {/* CHARTS ROW - Mock charts removed (Issue #16) */}
       <div style={s.chartsRow}>
 
-        {/* DONUT — Speaking Time */}
-        <div style={s.chartCard}>
-          <p style={s.chartLabel}>SPEAKING TIME</p>
-          <div style={{ display:'flex', alignItems:'center', gap:24 }}>
-            <PieChart width={120} height={120}>
-              <Pie 
-                data={SPEAKERS} 
-                dataKey="pct" 
-                innerRadius={36} 
-                outerRadius={56}
-                paddingAngle={3} 
-                startAngle={90} 
-                endAngle={-270} 
-                stroke="none"
-              >
-                {SPEAKERS.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Pie>
-            </PieChart>
-            <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-              {SPEAKERS.map(sp => (
-                <div key={sp.name} style={{ display:'flex', alignItems:'center', gap:8 }}>
-                  <div style={{ width:8, height:8, borderRadius:'50%', background:sp.color, flexShrink:0 }}/>
-                  <div style={{ display:'flex', flexDirection:'column' }}>
-                    <span style={{ fontSize:11, color:'#e8e4d0', letterSpacing:'0.04em' }}>{sp.name}</span>
-                    <span style={{ fontSize:10, color:'#555548' }}>{sp.pct}%</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* SENTIMENT TIMELINE */}
-        <div style={{ ...s.chartCard, flex:2 }}>
-          <p style={s.chartLabel}>MEETING ENERGY OVER TIME</p>
-          <ResponsiveContainer width="100%" height={120}>
-            <LineChart data={SENTIMENT} margin={{ top:4, right:8, left:-20, bottom:0 }}>
-              <CartesianGrid stroke="#1e1e16" strokeDasharray="3 3" vertical={false}/>
-              <XAxis dataKey="t" tick={{ fontSize:9, fill:'#555548', fontFamily:"'DM Mono',monospace" }}
-                axisLine={false} tickLine={false}/>
-              <YAxis domain={[0,100]} tick={{ fontSize:9, fill:'#555548' }} axisLine={false} tickLine={false}/>
-              <ReferenceLine y={50} stroke="#2a2a20" strokeDasharray="4 4"/>
-              <Tooltip
-                contentStyle={{ background:'#141410', border:'1px solid #2a2a20',
-                  borderRadius:4, fontSize:10, fontFamily:"'DM Mono',monospace", color:'#e8e4d0' }}
-                labelStyle={{ color:'#555548', marginBottom:4 }}
-              />
-              {SPEAKERS.map(sp => (
-                <Line key={sp.name} type="monotone" dataKey={sp.name}
-                  stroke={sp.color} strokeWidth={1.5} dot={<CustomDot/>} activeDot={{ r:4 }}/>
-              ))}
-            </LineChart>
-          </ResponsiveContainer>
-          <div style={{ display:'flex', gap:16, marginTop:8 }}>
-            {SPEAKERS.map(sp => (
-              <span key={sp.name} style={{ fontSize:9, color:sp.color, letterSpacing:'0.08em' }}>
-                ── {sp.name}
-              </span>
-            ))}
-          </div>
-        </div>
-
         {/* AI INSIGHTS */}
-        <div style={{ ...s.chartCard, flex:1.2 }}>
+        <div style={{ ...s.chartCard, flex:1 }}>
           <p style={s.chartLabel}>AI ANALYSIS</p>
           <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
             {insights.map((ins, i) => (

@@ -25,9 +25,11 @@ export async function uploadAudioToS3(uploadUrl, file) {
   })
 }
 
-export async function listMeetings() {
+export async function listMeetings(teamId = null) {
   const headers = await authHeaders()
-  const res = await axios.get(`${BASE}/meetings`, { headers })
+  const params = { _t: Date.now() } // Cache-busting timestamp
+  if (teamId) params.teamId = teamId
+  const res = await axios.get(`${BASE}/meetings`, { headers, params })
   return res.data.meetings
 }
 

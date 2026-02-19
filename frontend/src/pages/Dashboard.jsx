@@ -98,13 +98,22 @@ export default function Dashboard() {
       setUser(u.signInDetails?.loginId || '')
       fetchMeetings()
     })
-    pollRef.current = setInterval(fetchMeetings, 8000)
+    // Polling interval - will use current selectedTeamId
+    pollRef.current = setInterval(() => fetchMeetings(), 8000)
     return () => clearInterval(pollRef.current)
-  }, [])
+  }, [selectedTeamId]) // Re-run when team changes to update polling
 
   async function fetchMeetings() {
-    try { setMeetings(await listMeetings()) }
-    catch { setError('Failed to load meetings') }
+    try { 
+      // Add cache-busting timestamp to prevent CloudFront caching issues
+      const data = await listMeetings(selectedTeamId)
+      setMeetings(data)
+      setError('') // Clear any previous errors on success
+    }
+    catch (err) { 
+      console.error('Failed to fetch meetings:', err)
+      setError('Failed to load meetings') 
+    }
     finally { setLoading(false) }
   }
 
