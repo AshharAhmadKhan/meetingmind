@@ -37,8 +37,36 @@ def lambda_handler(event, context):
     meeting_id = event['pathParameters']['meetingId']
     table      = dynamodb.Table(TABLE_NAME)
 
+    # First try to get meeting by userId (uploader)
     response = table.get_item(Key={'userId': user_id, 'meetingId': meeting_id})
     item     = response.get('Item')
+
+    # If not found, scan for the meeting (for team members)
+    # This is less efficient but works without adding a new GSI
+    if not item:
+        try:
+            # Scan for the meeting by meetingId
+            response = table.scan(
+                FilterExpression='meetingId = :mid',
+                ExpressionAttributeValues={':mid': meeting_id}
+            )
+            items = response.get('Items', [])
+            if items:
+                item = items[0]
+                # Verify user is a team member if meeting has teamId
+                if item.get('teamId'):
+                    teams_table = dynamodb.Table(os.environ['TEAMS_TABLE'])
+                    membership_response = teams_table.get_item(
+                        Key={'teamId': item['teamId'], 'userId': user_id}
+                    )
+                    if not membership_response.get('Item'):
+                        return {
+                            'statusCode': 403,
+                            'headers': CORS_HEADERS,
+                            'body': json.dumps({'error': 'Not authorized to view this meeting'})
+                        }
+        except Exception as e:
+            print(f"Error scanning for meetingId: {e}")
 
     if not item:
         return {

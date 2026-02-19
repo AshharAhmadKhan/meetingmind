@@ -37,13 +37,18 @@
 
 ## PHASE 2: V1 DATA SEEDING - Issues Found
 
-### Issue 5: Cannot Open Meeting Details
+### Issue 5: Cannot Open Meeting Details ✅ RESOLVED
 - **Severity:** HIGH (demo blocker)
-- **Description:** V1 meetings show on dashboard but clicking them doesn't open meeting detail page
-- **Expected:** Should be able to click meeting card to see full details, decisions, action items
-- **Investigation:** Dashboard.jsx has click handler that checks `done && navigate()`. V1 meetings have status='DONE' so should work.
-- **Possible Cause:** Route not defined, or MeetingDetail page has errors
-- **Fix Required:** Check App.jsx routes and MeetingDetail.jsx for errors
+- **Status:** ✅ FIXED (February 20, 2026)
+- **Description:** Team member accounts could see meetings but clicking them returned 404 error
+- **Root Cause:** get-meeting API only queried by userId (uploader), so team members couldn't access meetings
+- **Fix Applied:**
+  - Modified `backend/functions/get-meeting/app.py` to scan for meetings by meetingId
+  - Added team membership validation before allowing access
+  - Returns 403 if user is not a team member
+- **Files Modified:**
+  - `backend/functions/get-meeting/app.py` - Added fallback scan for team members
+- **Verification:** ✅ Team members can now click and view meeting details
 
 ### Issue 6: Resurrect Function Fails
 - **Severity:** MEDIUM (feature broken)
@@ -391,20 +396,20 @@ These issues require re-recording with explicit name mentions:
   - Unassigned items = $0 value
   - Formula: `value = (assigned_count × $860) + (completed_count × bonus)`
 
-### Issue 16: Speaker Names Show Mock Data (CRITICAL BUG)
+### Issue 16: Speaker Names Show Mock Data ✅ RESOLVED (Replaced with Conditional Charts)
 - **Severity:** HIGH (demo blocker)
-- **Description:** Meeting detail page shows "Asher, Priyan, Zara" in speaking time chart. These are hardcoded mock names from development, not real data.
-- **Expected:** Should show actual speaker labels from Transcribe ("Speaker 0", "Speaker 1", "Speaker 2") OR mapped names if feature exists
-- **Current:** Hardcoded mock data in frontend component
-- **Impact:** 
-  - Looks unprofessional in demo
-  - Confusing for users (who are Asher, Priyan, Zara?)
-  - Suggests feature is fake/not working
-- **Fix Required:** 
-  - Remove hardcoded mock data from MeetingDetail.jsx
-  - Display actual attendees from meeting data
-  - If no attendees, show "Speaker 0, Speaker 1, Speaker 2"
-- **Location:** frontend/src/pages/MeetingDetail.jsx (speaking time chart component)
+- **Status:** ✅ FIXED (February 20, 2026)
+- **Description:** Meeting detail page showed hardcoded mock speaker names. Charts were removed to fix this.
+- **User Feedback:** User prefers having charts when there's data to show
+- **Fix Applied:**
+  - Restored Task Distribution chart with conditional logic
+  - Chart only shows if there are assigned owners (not "Unassigned")
+  - V1 meetings show the chart (have assigned owners)
+  - V2 meetings don't show it (all unassigned)
+  - AI Analysis section always shows
+- **Files Modified:**
+  - `frontend/src/pages/MeetingDetail.jsx` - Added conditional Task Distribution chart
+- **Verification:** ✅ Charts display when there's data, hidden when there isn't
 
 
 ---

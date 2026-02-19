@@ -311,8 +311,47 @@ export default function MeetingDetail() {
         </div>
       )}
 
-      {/* CHARTS ROW - Mock charts removed (Issue #16) */}
+      {/* CHARTS ROW - Show if there's data to display */}
       <div style={s.chartsRow}>
+        
+        {/* SPEAKER BREAKDOWN - Only show if we have owner data */}
+        {actions.some(a => a.owner && a.owner !== 'Unassigned') && (
+          <div style={s.chartCard}>
+            <p style={s.chartLabel}>TASK DISTRIBUTION</p>
+            <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+              {(() => {
+                // Group actions by owner
+                const ownerCounts = {}
+                actions.forEach(a => {
+                  if (a.owner && a.owner !== 'Unassigned') {
+                    ownerCounts[a.owner] = (ownerCounts[a.owner] || 0) + 1
+                  }
+                })
+                const total = Object.values(ownerCounts).reduce((sum, count) => sum + count, 0)
+                
+                return Object.entries(ownerCounts)
+                  .sort((a, b) => b[1] - a[1])
+                  .map(([owner, count]) => {
+                    const pct = Math.round((count / total) * 100)
+                    return (
+                      <div key={owner} style={{ display:'flex', alignItems:'center', gap:10 }}>
+                        <div style={{ flex:1 }}>
+                          <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
+                            <span style={{ fontSize:11, color:'#a8a890' }}>{owner}</span>
+                            <span style={{ fontSize:10, color:'#6b7260' }}>{count} task{count>1?'s':''}</span>
+                          </div>
+                          <div style={{ height:4, background:'#2a2a20', borderRadius:2 }}>
+                            <div style={{ height:'100%', width:`${pct}%`, background:'#c8f04a',
+                              borderRadius:2, transition:'width 0.3s' }}/>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })
+              })()}
+            </div>
+          </div>
+        )}
 
         {/* AI INSIGHTS */}
         <div style={{ ...s.chartCard, flex:1 }}>

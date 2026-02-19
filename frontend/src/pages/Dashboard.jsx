@@ -107,12 +107,16 @@ export default function Dashboard() {
     try { 
       // Add cache-busting timestamp to prevent CloudFront caching issues
       const data = await listMeetings(selectedTeamId)
-      setMeetings(data)
+      setMeetings(data || []) // Ensure we always have an array
       setError('') // Clear any previous errors on success
     }
     catch (err) { 
       console.error('Failed to fetch meetings:', err)
-      setError('Failed to load meetings') 
+      // Only show error if it's a real API failure, not empty data
+      if (err.response?.status !== 404) {
+        setError('Failed to load meetings')
+      }
+      setMeetings([]) // Set empty array on error
     }
     finally { setLoading(false) }
   }
