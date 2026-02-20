@@ -7,10 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-- Walk of Shame on leaderboard (planned)
+### Planned
+- Walk of Shame on leaderboard
+- Display name feature
+- Fuzzy name matching
+- Per-task notifications
 
-## [1.0.10] - 2026-02-20
+## [1.0.10] - 2026-02-20 ✅ CURRENT VERSION
 
 ### Added
 - **COMPREHENSIVE TEST MEETING** - Created test meeting covering all features

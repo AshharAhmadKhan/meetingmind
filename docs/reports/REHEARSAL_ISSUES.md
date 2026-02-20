@@ -1,7 +1,8 @@
 # Rehearsal Issues Tracker
 
-**Date:** February 20, 2026  
-**Purpose:** Track remaining bugs/issues found during demo rehearsal
+**Date:** February 20, 2026 - 7:30 PM IST  
+**Purpose:** Track remaining bugs/issues found during demo rehearsal  
+**Status:** Active - 6 issues remaining (Category B)
 
 ---
 
