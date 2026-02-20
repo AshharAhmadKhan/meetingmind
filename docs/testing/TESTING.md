@@ -448,7 +448,7 @@ jobs:
 
 ### Getting Help
 
-1. Check [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
+1. Check [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
 2. Review test output for specific errors
 3. Check AWS CloudWatch logs
 4. Email: thecyberprinciples@gmail.com

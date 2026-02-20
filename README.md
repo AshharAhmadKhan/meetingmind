@@ -62,7 +62,7 @@ MeetingMind follows strict testing practices similar to major open source projec
 python scripts/testing/run-ci-tests.py
 ```
 
-See [TESTING.md](TESTING.md) for complete testing guide.
+See [docs/testing/TESTING.md](docs/testing/TESTING.md) for complete testing guide.
 
 ---
 
@@ -117,7 +117,7 @@ aws s3 sync dist/ s3://YOUR_FRONTEND_BUCKET --delete
 aws cloudfront create-invalidation --distribution-id YOUR_DIST_ID --paths "/*"
 ```
 
-**📖 Detailed Instructions:** See [`docs/DEPLOY.md`](docs/DEPLOY.md)
+**📖 Detailed Instructions:** See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
 
 ---
 
@@ -157,10 +157,9 @@ meetingmind/
 |----------|-------------|
 | [`AI_AGENT_HANDBOOK.md`](AI_AGENT_HANDBOOK.md) | **🤖 For AI Agents** - Essential rules, architecture, common issues |
 | [`docs/PROJECT_BOOTSTRAP.md`](docs/PROJECT_BOOTSTRAP.md) | **Single source of truth** - Start here |
-| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Technical architecture deep-dive |
-| [`docs/FEATURES.md`](docs/FEATURES.md) | Feature documentation |
-| [`DEPLOY.md`](DEPLOY.md) | Deployment guide |
-| [`docs/TESTING.md`](docs/TESTING.md) | Testing procedures |
+| [`ARCHITECTURE.md`](ARCHITECTURE.md) | Technical architecture deep-dive |
+| [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) | Deployment guide |
+| [`docs/testing/TESTING.md`](docs/testing/TESTING.md) | Testing procedures |
 
 ---
 
