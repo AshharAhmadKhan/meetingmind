@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { logout, checkSession } from '../utils/auth.js'
 import { getAllActions, updateAction } from '../utils/api.js'
+import TeamSelector from '../components/TeamSelector.jsx'
 
 function getDaysOld(createdAt) {
   if (!createdAt) return 0
@@ -27,6 +28,7 @@ export default function Graveyard() {
   const [newOwner, setNewOwner] = useState('')
   const [newDeadline, setNewDeadline] = useState('')
   const [resurrecting, setResurrecting] = useState(false)
+  const [selectedTeamId, setSelectedTeamId] = useState(null)
 
   useEffect(() => {
     checkSession().then(u => {
@@ -34,11 +36,11 @@ export default function Graveyard() {
       setUser(u.signInDetails?.loginId || '')
       fetchBuried()
     })
-  }, [])
+  }, [selectedTeamId])
 
   async function fetchBuried() {
     try {
-      const data = await getAllActions()
+      const data = await getAllActions(null, null, selectedTeamId)
       const actions = data.actions || []
       
       // Filter: >30 days old and incomplete
@@ -125,6 +127,14 @@ export default function Graveyard() {
       </header>
 
       <main style={s.main}>
+        {/* Team Selector */}
+        <div style={{marginBottom: 24}}>
+          <TeamSelector 
+            selectedTeamId={selectedTeamId}
+            onTeamChange={setSelectedTeamId}
+          />
+        </div>
+
         <div style={s.topBar}>
           <div>
             <h1 style={s.pageTitle}>🪦 Action Item Graveyard</h1>
