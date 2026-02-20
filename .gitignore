@@ -22,6 +22,11 @@ backend/build/
 backend/*.zip
 backend/functions/*/*.zip
 
+# Build artifacts (policy files, temp configs)
+backend/*-policy-updated.json
+backend/*-policy.json
+backend/*.json.backup
+
 # AWS SAM
 .aws-sam/
 samconfig.toml
