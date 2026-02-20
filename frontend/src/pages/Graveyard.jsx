@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { logout, checkSession } from '../utils/auth.js'
+import { logout, checkSession, getUser } from '../utils/auth.js'
 import { getAllActions, updateAction } from '../utils/api.js'
 import TeamSelector from '../components/TeamSelector.jsx'
 
@@ -33,7 +33,7 @@ export default function Graveyard() {
   useEffect(() => {
     checkSession().then(u => {
       if (!u) { navigate('/login'); return }
-      setUser(u.signInDetails?.loginId || '')
+      setUser(getUser() || '')
       fetchBuried()
     })
   }, [selectedTeamId])

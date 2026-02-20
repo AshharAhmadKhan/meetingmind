@@ -250,7 +250,6 @@ export default function KanbanBoard({ actions, onStatusChange }) {
     // Status field is authoritative - fail fast if invalid
     if (action.status) {
       if (!validStatuses.includes(action.status)) {
-        console.error(`Invalid status "${action.status}" for action ${action.id}`);
         // Fallback to completed field
         return action.completed ? 'done' : 'todo';
       }
@@ -309,7 +308,6 @@ export default function KanbanBoard({ actions, onStatusChange }) {
 
       // Same column reordering
       if (overStatus && activeStatus === overStatus) {
-        console.log(`Reordering within ${activeStatus} column`);
         // TODO: Implement onReorder callback for within-column reordering
         // For now, we skip this as backend doesn't support order field yet
         return;
@@ -321,7 +319,6 @@ export default function KanbanBoard({ actions, onStatusChange }) {
     const currentStatus = getStatus(activeAction);
 
     if (targetStatus && targetStatus !== currentStatus && columns[targetStatus]) {
-      console.log(`Moving action ${activeAction.id} from ${currentStatus} to ${targetStatus}`);
       onStatusChange(activeAction.meetingId, activeAction.id, targetStatus);
     }
   }, [actions, getStatus, columns, onStatusChange]);

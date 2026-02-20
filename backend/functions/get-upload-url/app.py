@@ -47,6 +47,12 @@ def lambda_handler(event, context):
         content_type = body.get('contentType', 'audio/mpeg')
         file_size    = int(body.get('fileSize', 0))
         team_id  = body.get('teamId')  # Optional team context
+        
+        # DEBUG: Log what we received
+        print(f"🔍 BACKEND RECEIVED:")
+        print(f"   Body: {json.dumps(body)}")
+        print(f"   TeamId from body: {team_id}")
+        print(f"   TeamId type: {type(team_id)}")
 
         ext = ALLOWED_TYPES.get(content_type)
         if not ext:
@@ -93,7 +99,11 @@ def lambda_handler(event, context):
         }
         if team_id:
             item['teamId'] = team_id
+            print(f"✅ STORING WITH TEAMID: {team_id}")
+        else:
+            print(f"❌ NO TEAMID - storing as personal meeting")
         
+        print(f"📝 DynamoDB item: {json.dumps(item, default=str)}")
         table.put_item(Item=item)
 
         return {

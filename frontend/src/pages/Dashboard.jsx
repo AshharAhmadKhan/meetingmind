@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { logout, checkSession } from '../utils/auth.js'
+import { logout, checkSession, getUser } from '../utils/auth.js'
 import { listMeetings, getUploadUrl, uploadAudioToS3 } from '../utils/api.js'
 import Leaderboard from '../components/Leaderboard.jsx'
 import PatternCards from '../components/PatternCards.jsx'
@@ -79,7 +79,6 @@ function EmptyState() {
 export default function Dashboard() {
   const navigate = useNavigate()
   const fileRef  = useRef()
-  const pollRef  = useRef()
   const [user,      setUser]      = useState('')
   const [meetings,  setMeetings]  = useState([])
   const [loading,   setLoading]   = useState(true)
@@ -90,44 +89,82 @@ export default function Dashboard() {
   const [error,     setError]     = useState('')
   const [uploadPct, setUploadPct] = useState(0)
   const [zoneHover, setZoneHover] = useState(false)
-  const [selectedTeamId, setSelectedTeamId] = useState(null)
+  
+  // Initialize from localStorage immediately
+  const [selectedTeamId, setSelectedTeamId] = useState(() => {
+    const saved = localStorage.getItem('selectedTeamId')
+    return (saved && saved !== 'null' && saved !== '') ? saved : null
+  })
+  const [selectedTeamName, setSelectedTeamName] = useState('')
 
+  // Use ref to track the current teamId for polling
+  const selectedTeamIdRef = useRef(selectedTeamId)
+  
+  // Update ref whenever selectedTeamId changes
   useEffect(() => {
-    checkSession().then(u => {
-      if (!u) { navigate('/login'); return }
-      setUser(u.signInDetails?.loginId || '')
-      fetchMeetings()
-    })
-    // Polling interval - will use current selectedTeamId
-    pollRef.current = setInterval(() => fetchMeetings(), 8000)
-    return () => clearInterval(pollRef.current)
-  }, [selectedTeamId]) // Re-run when team changes to update polling
+    selectedTeamIdRef.current = selectedTeamId
+  }, [selectedTeamId])
 
-  async function fetchMeetings() {
+  // Fetch meetings function that uses the ref to get current teamId
+  const fetchMeetings = useCallback(async () => {
+    const currentTeamId = selectedTeamIdRef.current
+    
     try { 
-      // Add cache-busting timestamp to prevent CloudFront caching issues
-      const data = await listMeetings(selectedTeamId)
-      setMeetings(data || []) // Ensure we always have an array
-      setError('') // Clear any previous errors on success
+      const data = await listMeetings(currentTeamId)
+      setMeetings(data || [])
+      setError('')
     }
     catch (err) { 
-      console.error('Failed to fetch meetings:', err)
-      // Only show error if it's a real API failure, not empty data
       if (err.response?.status !== 404) {
         setError('Failed to load meetings')
       }
-      setMeetings([]) // Set empty array on error
+      setMeetings([])
     }
     finally { setLoading(false) }
-  }
+  }, []) // No dependencies - uses ref instead
+
+  // Handle team change with localStorage persistence
+  const handleTeamChange = useCallback((teamId) => {
+    setSelectedTeamId(teamId)
+    localStorage.setItem('selectedTeamId', teamId || '')
+  }, [])
+
+  // Initial setup and polling
+  useEffect(() => {
+    let mounted = true
+    
+    checkSession().then(u => {
+      if (!mounted) return
+      if (!u) { navigate('/login'); return }
+      setUser(getUser() || '')
+      fetchMeetings()
+    })
+    
+    // Set up polling interval
+    const interval = setInterval(() => {
+      fetchMeetings()
+    }, 8000)
+    
+    return () => {
+      mounted = false
+      clearInterval(interval)
+    }
+  }, [fetchMeetings, navigate])
+
+  // Fetch meetings when team changes
+  useEffect(() => {
+    fetchMeetings()
+  }, [selectedTeamId, fetchMeetings])
 
   async function handleFile(file) {
     if (!file) return
+    
+    const currentTeamId = selectedTeamIdRef.current
     const meetingTitle = title.trim() || file.name.replace(/\.[^/.]+$/, '')
     setUploading(true); setUploadPct(0)
     setUploadMsg('Requesting upload slot…'); setError('')
     try {
-      const { uploadUrl } = await getUploadUrl(meetingTitle, file.type || 'audio/mpeg', file.size, selectedTeamId)
+      const { uploadUrl } = await getUploadUrl(meetingTitle, file.type || 'audio/mpeg', file.size, currentTeamId)
       setUploadMsg('Uploading audio…'); setUploadPct(40)
       await uploadAudioToS3(uploadUrl, file)
       setUploadPct(100); setUploadMsg('✓ Upload complete — AI processing started')
@@ -178,7 +215,8 @@ export default function Dashboard() {
           <div style={{marginBottom: 24}}>
             <TeamSelector 
               selectedTeamId={selectedTeamId}
-              onTeamChange={setSelectedTeamId}
+              onTeamChange={handleTeamChange}
+              onTeamNameChange={setSelectedTeamName}
             />
           </div>
 
@@ -300,6 +338,22 @@ export default function Dashboard() {
               onChange={e => setTitle(e.target.value)}
               placeholder="e.g. Q1 Planning Session"
               style={s.inp}/>
+          </div>
+
+          {/* Visual confirmation of upload destination */}
+          <div style={s.uploadDestination}>
+            <span style={s.uploadDestLabel}>📤 UPLOADING TO:</span>
+            <span style={s.uploadDestValue}>
+              {selectedTeamId && selectedTeamName ? (
+                <>
+                  <span style={s.teamEmoji}>👥</span> {selectedTeamName}
+                </>
+              ) : (
+                <>
+                  <span style={s.teamEmoji}>📋</span> Personal (Just Me)
+                </>
+              )}
+            </span>
           </div>
 
           <div className="uzone"
@@ -487,6 +541,14 @@ const s = {
          borderRadius:4, padding:'10px 12px', color:'#f0ece0',
          fontSize:13, fontFamily:"'DM Mono',monospace", caretColor:'#c8f04a',
          outline:'none', transition:'border-color 0.2s'},
+  uploadDestination:{background:'#141a09', border:'1px solid #3a4a18', borderRadius:4,
+                     padding:'10px 14px', marginBottom:14, display:'flex',
+                     alignItems:'center', gap:10},
+  uploadDestLabel:{fontSize:9, letterSpacing:'0.12em', color:'#6b7260',
+                   textTransform:'uppercase'},
+  uploadDestValue:{fontSize:12, color:'#c8f04a', letterSpacing:'0.02em',
+                   fontWeight:500, display:'flex', alignItems:'center', gap:6},
+  teamEmoji:{fontSize:14},
   zone: {border:'1px dashed #3a3a2e', borderRadius:8, padding:'28px 20px',
          textAlign:'center', cursor:'pointer', marginBottom:14, background:'#111108'},
   zoneTitle:{fontSize:13, color:'#e8e4d0', marginBottom:4, marginTop:4},

@@ -6,6 +6,7 @@ export default function LoginPage() {
   const navigate  = useNavigate()
   const [email,    setEmail]    = useState('')
   const [password, setPassword] = useState('')
+  const [name,     setName]     = useState('')
   const [error,    setError]    = useState('')
   const [loading,  setLoading]  = useState(false)
   const [isSignup, setIsSignup] = useState(false)
@@ -21,7 +22,7 @@ export default function LoginPage() {
     setLoading(true)
     try {
       if (isSignup) {
-        await signup(email, password)
+        await signup(email, password, name)
         setSignupSuccess(true)
       } else {
         await login(email, password)
@@ -151,6 +152,21 @@ export default function LoginPage() {
           {error && <div style={s.err}>{error}</div>}
 
           <form onSubmit={handleSubmit} style={s.form}>
+            {isSignup && (
+              <div style={s.fGroup}>
+                <label style={s.label}>FULL NAME</label>
+                <input
+                  className="inp"
+                  type="text"
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  placeholder="Ashhar Ahmad Khan"
+                  required
+                  style={s.input}
+                />
+              </div>
+            )}
+
             <div style={s.fGroup}>
               <label style={s.label}>EMAIL ADDRESS</label>
               <input

@@ -331,6 +331,8 @@ Resources:
       Policies:
         - DynamoDBReadPolicy:
             TableName: !Ref MeetingsTable
+        - DynamoDBReadPolicy:
+            TableName: !Ref TeamsTable
       Events:
         Api:
           Type: Api

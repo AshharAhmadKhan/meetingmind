@@ -3,6 +3,11 @@ import boto3
 import os
 from datetime import datetime, timezone
 from decimal import Decimal
+import sys
+
+# Add parent directory to path for shared constants
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
+from constants import VALID_ACTION_STATUSES
 
 dynamodb   = boto3.resource('dynamodb')
 TABLE_NAME = os.environ['MEETINGS_TABLE']
@@ -101,8 +106,7 @@ def lambda_handler(event, context):
             
             # Update status field if provided
             if status:
-                valid_statuses = ['todo', 'in_progress', 'blocked', 'done']
-                if status in valid_statuses:
+                if status in VALID_ACTION_STATUSES:
                     action['status'] = status
                     # Sync completed field with status
                     if status == 'done':

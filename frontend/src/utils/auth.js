@@ -1,5 +1,5 @@
 import { Amplify } from 'aws-amplify'
-import { signIn, signOut, getCurrentUser, fetchAuthSession, signUp } from 'aws-amplify/auth'
+import { signIn, signOut, getCurrentUser, fetchAuthSession, signUp, fetchUserAttributes } from 'aws-amplify/auth'
 
 const cfg = (typeof window !== 'undefined' && window.__MM_CONFIG__) || {}
 const userPoolId       = cfg.userPoolId       || import.meta.env.VITE_USER_POOL_ID       || 'ap-south-1_PLACEHOLDER'
@@ -18,12 +18,15 @@ export async function login(email, password) {
   return await signIn({ username: email, password })
 }
 
-export async function signup(email, password) {
+export async function signup(email, password, name) {
   return await signUp({
     username: email,
     password,
     options: {
-      userAttributes: { email }
+      userAttributes: { 
+        email,
+        name: name || email  // Fallback to email if name not provided
+      }
     }
   })
 }
@@ -47,7 +50,10 @@ export function getUser() {
 export async function checkSession() {
   try {
     const user = await getCurrentUser()
-    localStorage.setItem('mm_user', user.signInDetails?.loginId || user.username)
+    // Fetch user attributes to get display name
+    const attributes = await fetchUserAttributes()
+    const displayName = attributes.name || user.signInDetails?.loginId || user.username
+    localStorage.setItem('mm_user', displayName)
     return user
   } catch {
     localStorage.removeItem('mm_user')

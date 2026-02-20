@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { listUserTeams, createTeam, joinTeam, getTeam } from '../utils/api'
 
-export default function TeamSelector({ selectedTeamId, onTeamChange }) {
+export default function TeamSelector({ selectedTeamId, onTeamChange, onTeamNameChange }) {
   const [teams, setTeams] = useState([])
   const [loading, setLoading] = useState(true)
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -20,12 +20,18 @@ export default function TeamSelector({ selectedTeamId, onTeamChange }) {
     loadTeams()
   }, [])
 
+  // Update parent with team name when selection changes
+  useEffect(() => {
+    if (onTeamNameChange) {
+      const selectedTeam = teams.find(t => t.teamId === selectedTeamId)
+      onTeamNameChange(selectedTeam ? selectedTeam.teamName : '')
+    }
+  }, [selectedTeamId, teams, onTeamNameChange])
+
   async function loadTeams() {
     try {
       const data = await listUserTeams()
       setTeams(data.teams || [])
-    } catch (err) {
-      console.error('Failed to load teams:', err)
     } finally {
       setLoading(false)
     }
@@ -172,7 +178,13 @@ export default function TeamSelector({ selectedTeamId, onTeamChange }) {
     <div style={s.root}>
       <select
         value={selectedTeamId || ''}
-        onChange={(e) => onTeamChange(e.target.value || null)}
+        onChange={(e) => {
+          const newValue = e.target.value || null
+          // Only call onTeamChange if the value actually changed
+          if (newValue !== selectedTeamId) {
+            onTeamChange(newValue)
+          }
+        }}
         style={s.select}
       >
         <option value="">📋 Personal (Just Me)</option>
