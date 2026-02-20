@@ -170,7 +170,7 @@ These issues cannot be fixed with current data because all V2 meetings have unas
 8. ✅ Issue #20 - Graveyard datetime errors (DONE - Epitaph generation fixed)
 
 ### Phase 3: Backend Fixes (Next - 2-3 hours total)
-9. Issue #21 - Debt dashboard real data (45 min)
+9. ✅ Issue #21 - Debt dashboard real data (DONE - Backend deployed, cache cleared)
 10. Issue #14 - Health score formula (45 min)
 11. Issue #15 - ROI calculation (45 min)
 
@@ -212,8 +212,8 @@ Then we'll tackle Category B (requires new audio):
 ## Current Status
 
 - ✅ Phase 1 Quick Wins: COMPLETE (5 issues)
-- ✅ Phase 2 High-Impact Fixes: COMPLETE (3 issues)
+- ✅ Phase 2 High-Impact Fixes: COMPLETE (4 issues)
 - ⏳ Phase 3 Backend Fixes: IN PROGRESS
-- 📋 4 issues in Category A remaining
+- 📋 3 issues in Category A remaining
 - 🎤 6 issues in Category B (blocked on audio)
 - 📝 4 issues in Category C (documentation)

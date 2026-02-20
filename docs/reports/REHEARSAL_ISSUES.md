@@ -18,6 +18,7 @@
 - ✅ Issue #18: Kanban Drag-and-Drop (Team member update actions fixed)
 - ✅ Issue #6: Resurrect Function (Fixed with team member access)
 - ✅ Issue #20: Graveyard Datetime Errors (Fixed epitaph generation)
+- ✅ Issue #21: Debt Dashboard Mock Data (Backend Lambda deployed, CloudFront cache cleared)
 
 ---
 
@@ -30,12 +31,6 @@
 - **Description:** After clicking "Done" on team creation, invite code disappears. No way to retrieve it later.
 - **Expected:** Should be able to view invite code from team settings/details page
 - **Fix Required:** Add "View Invite Code" button in team management
-
-### Issue #21: All Debt Dashboard Charts Show Mock Data
-- **Severity:** HIGH (demo blocker)
-- **Description:** Every chart and section on Debt Dashboard shows placeholder/mock data that doesn't change
-- **Expected:** Should show real calculated data from meetings
-- **Fix Required:** Check DebtDashboard.jsx for hardcoded data, implement real calculations
 
 ### Issue #14: Health Score Doesn't Penalize Unassigned Tasks Enough
 - **Severity:** MEDIUM (scoring accuracy)
@@ -115,10 +110,9 @@
 ### Phase 3: Backend Fixes (Next)
 1. Issue #14 - Health score formula (45 min)
 2. Issue #15 - ROI calculation (45 min)
-3. Issue #21 - Debt dashboard real data (45 min)
 
 ### Phase 4: Polish
-4. Issue #2 - View invite code (30 min)
+3. Issue #2 - View invite code (30 min)
 
 ---
 
