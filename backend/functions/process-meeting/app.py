@@ -37,23 +37,35 @@ def _update(table, user_id, meeting_id, status, extra=None):
     try:
         existing = table.get_item(Key={'userId': user_id, 'meetingId': meeting_id})
         is_new = 'Item' not in existing
+        existing_item = existing.get('Item', {})
     except:
         is_new = True
+        existing_item = {}
     
     now = datetime.now(timezone.utc).isoformat()
     
-    item = {
+    # Start with existing item to preserve fields like teamId
+    item = existing_item.copy() if existing_item else {}
+    
+    # Update with new values
+    item.update({
         'userId': user_id,
         'meetingId': meeting_id,
         'status': status,
         'updatedAt': now
-    }
+    })
     
     # Add createdAt only for new meetings
     if is_new:
         item['createdAt'] = now
     
+    # Add extra fields
     item.update(extra or {})
+    
+    # Log teamId preservation
+    if 'teamId' in item:
+        print(f"🔄 Preserving teamId: {item['teamId']}")
+    
     table.put_item(Item=item)
 
 def _get_format(s3_key):
