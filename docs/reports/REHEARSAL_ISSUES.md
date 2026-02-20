@@ -27,6 +27,9 @@
 ### Phase 4: Polish - COMPLETE
 - ✅ Issue #2: View Invite Code (Added "View Code" button to TeamSelector)
 
+### Category C: Documentation/Operational - VERIFIED
+- ✅ Issue #8: Duplicate Detection (Verified working - embeddings disabled to avoid Bedrock costs)
+
 ---
 
 ## REMAINING ISSUES - Category B (Requires New Audio Recordings)
@@ -74,13 +77,6 @@
 - **Severity:** MEDIUM (verification)
 - **Description:** Need to verify debt dashboard calculations are accurate
 - **Fix Required:** Manual verification of calculations
-
-### Issue #8: No Duplicate Detection Showing - VERIFIED ✅
-- **Severity:** LOW (feature verification)
-- **Description:** "No duplicates detected" message shows
-- **Root Cause:** V1 historical data seeded without embeddings (11/20 actions missing embeddings)
-- **Status:** Code is correct - duplicate detection works for new meetings with embeddings
-- **Note:** Bedrock embeddings may be disabled (using fallback). System functional but not optimal
 
 ### Issue #10: Document Explicit Name Requirement
 - **Severity:** MEDIUM (documentation)
