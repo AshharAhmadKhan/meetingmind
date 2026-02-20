@@ -20,6 +20,10 @@
 - ✅ Issue #20: Graveyard Datetime Errors (Fixed epitaph generation)
 - ✅ Issue #21: Debt Dashboard Mock Data (Backend Lambda deployed, CloudFront cache cleared)
 
+### Phase 3: Backend Fixes - COMPLETE
+- ✅ Issue #14: Health Score Formula (Verified correct - 30/100 for all unassigned)
+- ✅ Issue #15: ROI Calculation (Verified correct - -100% for all unassigned)
+
 ---
 
 ---
@@ -27,18 +31,6 @@
 ## REMAINING ISSUES - Category A (Can Fix with Existing Data)
 
 ### Issue #2: Cannot See Team Invite Code After Creation
-- **Severity:** MEDIUM (usability)
-- **Description:** After clicking "Done" on team creation, invite code disappears. No way to retrieve it later.
-- **Expected:** Should be able to view invite code from team settings/details page
-- **Fix Required:** Add "View Invite Code" button in team management
-
-### Issue #14: Health Score Doesn't Penalize Unassigned Tasks Enough
-- **Severity:** MEDIUM (scoring accuracy)
-- **Description:** Meeting with all unassigned tasks gets 8/10 health score
-- **Expected:** Unassigned tasks should heavily penalize the score (should be 4/10 or 5/10)
-- **Fix Required:** Adjust health scoring algorithm in process-meeting Lambda
-
-### Issue #15: ROI Calculation Doesn't Account for Unassigned Items
 - **Severity:** MEDIUM (metric accuracy)
 - **Description:** Meeting with all unassigned tasks shows +1433% ROI
 - **Expected:** Unassigned items should have $0 value, ROI should be -100%
