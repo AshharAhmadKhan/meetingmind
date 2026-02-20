@@ -83,6 +83,7 @@
 - `scripts/testing/features/test-admin-notification.py` (Issue #4)
 - `scripts/testing/features/test-unassigned-warning.py` (Issue #11)
 - `scripts/testing/features/verify-debt-calculations.py` (Issue #7)
+- `scripts/testing/features/test-fuzzy-matching-integration.py` (Issue #12)
 
 ### Implementation Files
 - `frontend/src/pages/MeetingDetail.jsx` (Issue #11 - warning banner)
