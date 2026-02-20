@@ -4,8 +4,13 @@ Test that team members can access team meetings via the API
 """
 import boto3
 import json
+import sys
 
-dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
+# Fix Unicode encoding for Windows
+if sys.platform == "win32":
+    sys.stdout.reconfigure(encoding="utf-8")
+
+dynamodb = boto3.resource('dynamodb', region_name='ap-south-1')
 meetings_table = dynamodb.Table('meetingmind-meetings')
 teams_table = dynamodb.Table('meetingmind-teams')
 

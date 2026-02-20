@@ -1,0 +1,47 @@
+#!/bin/bash
+# MeetingMind Pre-Commit Hook
+# Runs CI tests before allowing commit
+# 
+# To install: 
+#   chmod +x .githooks/pre-commit
+#   git config core.hooksPath .githooks
+
+echo ""
+echo "========================================================================"
+echo "MEETINGMIND PRE-COMMIT VALIDATION"
+echo "========================================================================"
+echo ""
+echo "Running CI test suite..."
+echo "This ensures your changes don't break existing functionality."
+echo ""
+
+# Run CI tests
+python scripts/testing/run-ci-tests.py
+
+# Check exit code
+if [ $? -ne 0 ]; then
+    echo ""
+    echo "========================================================================"
+    echo "❌ CI TESTS FAILED - COMMIT BLOCKED"
+    echo "========================================================================"
+    echo ""
+    echo "Your commit has been blocked because one or more critical tests failed."
+    echo ""
+    echo "What to do:"
+    echo "  1. Review the test failures above"
+    echo "  2. Fix the issues in your code"
+    echo "  3. Run tests manually: python scripts/testing/run-ci-tests.py"
+    echo "  4. Try committing again once tests pass"
+    echo ""
+    echo "To bypass (NOT RECOMMENDED):"
+    echo "  git commit --no-verify"
+    echo ""
+    exit 1
+fi
+
+echo ""
+echo "========================================================================"
+echo "✅ ALL CI TESTS PASSED - PROCEEDING WITH COMMIT"
+echo "========================================================================"
+echo ""
+exit 0
