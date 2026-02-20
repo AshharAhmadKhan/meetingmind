@@ -1,169 +1,322 @@
-# MeetingMind Pre-Deploy Test Suite
+# Testing Scripts
 
-Comprehensive CI-style test suite that validates all aspects of MeetingMind before deployment.
+**Last Updated:** February 20, 2026
+
+Comprehensive test suite for MeetingMind.
+
+## Directory Structure
+
+```
+scripts/testing/
+├── README.md              # This file
+├── core/                  # Core test utilities
+│   ├── comprehensive-test-suite.py
+│   ├── run-all-tests.py
+│   ├── create-comprehensive-test-meeting.py
+│   ├── fix-test-meeting-status.py
+│   ├── compare-meeting-formats.py
+│   └── verify-test-meeting.py
+├── api/                   # API endpoint tests
+│   ├── test-api-endpoint.py
+│   ├── test-debt-api-call.py
+│   ├── test-duplicate-api-call.py
+│   ├── test-list-meetings-api.py
+│   ├── test-team-meetings-api.py
+│   └── simulate-api-calls.py
+├── features/              # Feature-specific tests
+│   ├── test-debt-dashboard.py
+│   ├── test-duplicate-detection.py
+│   ├── test-duplicate-lambda-direct.py
+│   ├── test-graveyard-data.py
+│   ├── check-graveyard-data.py
+│   ├── test-view-invite-code.py
+│   └── verify-meeting-rating-formula.py
+├── archive/               # Old/deprecated tests
+│   ├── test-nova-*.py
+│   ├── simulate-*.py
+│   ├── test-throttle*.py
+│   └── test-v1-*.py
+└── [other test scripts]   # Uncategorized tests
+```
 
 ## Quick Start
 
+### Run All Tests
 ```bash
-# Run all tests
-python scripts/testing/run-all-tests.py
+python scripts/testing/core/run-all-tests.py
+```
 
-# Expected output: 75/80 tests passed (5 non-blocking warnings)
+### Run Comprehensive Test Suite
+```bash
+python scripts/testing/core/comprehensive-test-suite.py
+```
+
+### Create Test Meeting
+```bash
+python scripts/testing/core/create-comprehensive-test-meeting.py
 ```
 
 ## Test Categories
 
-### 1. Python Syntax (42 tests)
-- Validates all 18 Lambda function files compile without errors
-- Validates all 24 script files compile without errors
-- Catches syntax errors before deployment
+### Core Tests
+Essential test utilities and comprehensive test suites.
 
-### 2. Frontend Build (1 test)
-- Runs `npm run build` to ensure frontend compiles
-- Validates bundle size and build time
-- Warning if npm not found (run manually)
+**Key Scripts:**
+- `comprehensive-test-suite.py` - Full system verification (80 tests)
+- `run-all-tests.py` - Quick test runner
+- `create-comprehensive-test-meeting.py` - Creates test meeting with all features
+- `compare-meeting-formats.py` - Identifies V1 vs V2 meeting structures
 
-### 3. AWS Connectivity (18 tests)
-- DynamoDB tables and GSIs are active
-- S3 bucket exists and is accessible
-- All 18 Lambda functions are deployed and active
-- API Gateway is live and responding
-- Cognito user pool is configured
-- CloudFront distribution is active
-- SES is verified and sending
-- Bedrock models are accessible (Claude, Nova Lite)
-- EventBridge rules are enabled
-- SQS queues exist
-- SNS topics exist
-- CloudWatch logs are flowing
-- X-Ray tracing is enabled
+**When to Use:**
+- Before deployment
+- After major changes
+- To verify system health
 
-### 4. API Endpoint Smoke Tests (6 tests)
-- All endpoints respond to OPTIONS requests (CORS preflight)
-- Unauthenticated requests return 401 (auth working)
-- Tests: /upload-url, /meetings, /teams, /debt-analytics, /all-actions
+### API Tests
+Tests for API Gateway endpoints and Lambda functions.
 
-### 5. Data Integrity (3 tests)
-- Meetings table schema is valid
-- Teams table schema is valid
-- All GSIs are in ACTIVE state (not ERROR)
+**Key Scripts:**
+- `test-api-endpoint.py` - Generic API endpoint tester
+- `test-list-meetings-api.py` - Tests meeting list endpoint
+- `test-team-meetings-api.py` - Tests team filtering
+- `test-debt-api-call.py` - Tests debt analytics endpoint
 
-### 6. Frontend Configuration (4 tests)
-- Environment variables file exists
-- API URL is correctly configured
-- Cognito configuration is present
-- CloudFront URL matches
+**When to Use:**
+- After API changes
+- To debug CORS issues
+- To verify authentication
 
-### 7. Feature Verification (6 tests)
-- Graveyard promotion logic (>30 days)
-- Pattern detection (6 patterns)
-- Risk scoring algorithm
-- Multi-model fallback chain
-- Duplicate detection threshold
+### Feature Tests
+Tests for specific MeetingMind features.
 
-## Exit Codes
+**Key Scripts:**
+- `test-debt-dashboard.py` - Tests debt calculation
+- `test-duplicate-detection.py` - Tests semantic search
+- `test-graveyard-data.py` - Tests graveyard logic
+- `verify-meeting-rating-formula.py` - Verifies health score formula
 
-- `0` - All tests passed or only warnings (safe to deploy)
-- `1` - One or more tests failed (deployment blocked)
+**When to Use:**
+- After feature changes
+- To verify calculations
+- To test edge cases
 
-## Known Warnings (Non-Blocking)
+### Archive
+Old or deprecated tests kept for reference.
 
-These warnings do not block deployment:
+**Contents:**
+- Nova model tests (testing complete)
+- Throttling tests (issue resolved)
+- V1 migration tests (migration complete)
+- Simulation scripts (replaced by real tests)
 
-1. **Frontend Build: npm not found** - Run `npm run build` manually in frontend/
-2. **Bedrock Claude: Throttled** - Payment validation pending, Nova fallback works
-3. **CloudFront URL: Not found** - Optional check, deployment works without it
-4. **Graveyard logic: Cannot verify** - File encoding issue, logic is present
-5. **Pattern detection: Only 0 patterns found** - File encoding issue, patterns exist
+**When to Use:**
+- Historical reference only
+- Do not use for active testing
 
-## Usage in CI/CD
+## Common Test Patterns
 
-```bash
-# Run before deployment
-python scripts/testing/run-all-tests.py
+### Testing Lambda Functions
+```python
+import boto3
 
-# Check exit code
-if [ $? -eq 0 ]; then
-  echo "✅ Tests passed - deploying..."
-  ./scripts/deploy/deploy-all-lambdas.ps1
-  ./scripts/deploy/deploy-frontend.ps1
-else
-  echo "❌ Tests failed - fix issues before deploying"
-  exit 1
-fi
+lambda_client = boto3.client('lambda', region_name='ap-south-1')
+
+response = lambda_client.invoke(
+    FunctionName='meetingmind-FUNCTION_NAME',
+    InvocationType='RequestResponse',
+    Payload=json.dumps(event)
+)
+
+result = json.loads(response['Payload'].read())
 ```
 
-## Manual Testing Checklist
+### Testing API Endpoints
+```python
+import requests
 
-After automated tests pass, manually verify:
+headers = {
+    'Authorization': f'Bearer {jwt_token}',
+    'Content-Type': 'application/json'
+}
 
-1. Frontend loads in browser (clear cache)
-2. Login with Cognito works
-3. Upload a test meeting
-4. Check meeting appears on Dashboard
-5. Verify Kanban board drag-and-drop
-6. Check Graveyard for old items
-7. Verify Leaderboard displays correctly
+response = requests.get(
+    'https://API_URL/endpoint',
+    headers=headers
+)
 
-## Troubleshooting
-
-### Test fails with "AWS credentials not found"
-```bash
-aws configure
-# Enter your access key, secret key, and region (ap-south-1)
+assert response.status_code == 200
 ```
 
-### Test fails with "Lambda function not found"
-```bash
-# Deploy Lambda functions first
-cd backend
-sam build
-# Then update each function
+### Testing DynamoDB
+```python
+import boto3
+
+dynamodb = boto3.resource('dynamodb', region_name='ap-south-1')
+table = dynamodb.Table('meetingmind-meetings')
+
+response = table.get_item(
+    Key={'userId': user_id, 'meetingId': meeting_id}
+)
+
+assert 'Item' in response
 ```
 
-### Test fails with "Frontend build error"
-```bash
-cd frontend
-npm install
-npm run build
+## Test Data
+
+### Test Accounts
+- **Main:** thecyberprinciples@gmail.com (userId: c1c38d2a-1081-7088-7c71-0abc19a150e9)
+- **Member 1:** thehiddenif@gmail.com
+- **Member 2:** whispersbehindthecode@gmail.com
+
+### Test Teams
+- **V1 Team:** Project V1 - Legacy (teamId: 95febcb2-97e2-4395-bdde-da8475dbae0d)
+- **V2 Team:** Project V2 - Active (teamId: df29c543-a4d0-4c80-a086-6c11712d66f3)
+
+### Test Meetings
+- **Comprehensive Test:** c12dbaa2-8125-4861-8d98-77b5719328ec (7 action items, all features)
+- **V1 Meetings:** 3 historical meetings (D, F, GHOST grades)
+- **V2 Meetings:** 3 active meetings (various states)
+
+## Writing New Tests
+
+### Test Script Template
+```python
+#!/usr/bin/env python3
+"""
+Brief description of what this test does
+"""
+
+import boto3
+import json
+
+def test_feature():
+    """Test specific feature"""
+    # Setup
+    client = boto3.client('service', region_name='ap-south-1')
+    
+    # Execute
+    response = client.operation(...)
+    
+    # Verify
+    assert response['StatusCode'] == 200
+    print("✅ Test passed")
+
+def main():
+    print("\n" + "="*70)
+    print("TEST NAME")
+    print("="*70)
+    
+    try:
+        test_feature()
+        print("\n✅ All tests passed")
+    except Exception as e:
+        print(f"\n❌ Test failed: {e}")
+        exit(1)
+
+if __name__ == '__main__':
+    main()
 ```
 
-### Test fails with "DynamoDB table not found"
+### Best Practices
+1. Use descriptive test names
+2. Include setup and teardown
+3. Print clear success/failure messages
+4. Use assertions to verify results
+5. Handle errors gracefully
+6. Document expected behavior
+7. Clean up test data after running
+
+## Troubleshooting Tests
+
+### Tests Fail with Import Errors
 ```bash
-# Deploy infrastructure first
-cd backend
-sam deploy --guided
+pip install boto3 requests python-dotenv
 ```
 
-## Performance
+### Tests Fail with 403 Errors
+- Verify AWS credentials configured
+- Check Cognito user exists
+- Verify JWT token is valid
 
-- Total runtime: ~30-45 seconds
-- Python syntax: ~2 seconds
-- Frontend build: ~15 seconds (if npm available)
-- AWS connectivity: ~10 seconds
-- API endpoints: ~5 seconds
-- Data integrity: ~2 seconds
-- Frontend config: <1 second
-- Feature verification: <1 second
+### Tests Fail with Connection Errors
+- Check AWS region (ap-south-1)
+- Verify internet connection
+- Check AWS service status
 
-## Maintenance
+### Tests Fail with Data Errors
+- Verify test data exists
+- Check DynamoDB table names
+- Verify user IDs and team IDs
 
-Update this test suite when:
-- Adding new Lambda functions (update expected_functions list)
-- Adding new API endpoints (update endpoints list)
-- Adding new features (add verification checks)
-- Changing DynamoDB schema (update required_fields)
-- Changing environment variables (update config checks)
+## CI/CD Integration
 
-## Related Files
+### Pre-Deployment Checks
+```bash
+# Run comprehensive test suite
+python scripts/testing/core/comprehensive-test-suite.py
 
-- `comprehensive-test-suite.py` - Original test suite (more detailed)
-- `check-aws-account.py` - AWS account validation
-- `test-api-endpoint.py` - Individual endpoint testing
-- `fix-and-test-all.py` - Fix and test workflow
+# Exit code 0 = safe to deploy
+# Exit code 1 = deployment blocked
+```
+
+### Post-Deployment Verification
+```bash
+# Verify API endpoints
+python scripts/testing/api/test-api-endpoint.py
+
+# Verify features
+python scripts/testing/features/test-debt-dashboard.py
+python scripts/testing/features/test-graveyard-data.py
+```
+
+## Performance Testing
+
+### Load Testing
+```bash
+# Test concurrent requests
+python scripts/testing/test-concurrent-requests.py
+```
+
+### Latency Testing
+```bash
+# Measure API response times
+python scripts/testing/test-api-latency.py
+```
+
+## Security Testing
+
+### Authentication Testing
+```bash
+# Test JWT validation
+python scripts/testing/test-auth-validation.py
+```
+
+### Authorization Testing
+```bash
+# Test team member access
+python scripts/testing/test-team-member-access.py
+```
+
+## Monitoring
+
+### CloudWatch Logs
+```bash
+# Tail Lambda logs during testing
+aws logs tail /aws/lambda/meetingmind-FUNCTION_NAME --follow
+```
+
+### X-Ray Traces
+- View traces in AWS X-Ray console
+- Identify performance bottlenecks
+- Debug distributed transactions
+
+## Support
+
+For issues or questions:
+- Check [TROUBLESHOOTING.md](../../docs/TROUBLESHOOTING.md)
+- Review [TESTING.md](../../docs/TESTING.md)
+- Email: thecyberprinciples@gmail.com
 
 ---
 
-**Last Updated:** February 19, 2026  
-**Version:** 1.0.0  
-**Maintainer:** MeetingMind Team
+**Last Updated:** February 20, 2026 - 7:15 PM IST

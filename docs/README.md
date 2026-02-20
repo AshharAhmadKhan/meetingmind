@@ -27,11 +27,22 @@ Welcome to the MeetingMind documentation hub. This directory contains all techni
   - User workflows
 
 ### 🚀 Operational Guides
-- **[DEPLOY.md](DEPLOY.md)** - Deployment guide
-  - Step-by-step deployment instructions
-  - Backend (SAM) deployment
-  - Frontend (S3 + CloudFront) deployment
-  - Troubleshooting
+- **[DEPLOYMENT.md](DEPLOYMENT.md)** - Complete deployment guide
+  - Prerequisites and setup
+  - Backend deployment (SAM)
+  - Frontend deployment (S3 + CloudFront)
+  - Post-deployment configuration
+  - Updating existing deployments
+  - Rollback procedures
+  - Monitoring and troubleshooting
+
+- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** - Common issues and solutions
+  - Deployment issues
+  - Backend issues (CORS, Bedrock, DynamoDB)
+  - Frontend issues (login, dashboard, Kanban)
+  - AWS service issues
+  - Testing issues
+  - Debug checklist
 
 - **[TESTING.md](TESTING.md)** - Testing procedures
   - Manual testing workflows
@@ -165,5 +176,5 @@ When adding or updating documentation:
 
 ---
 
-**Last Updated:** February 19, 2026  
+**Last Updated:** February 20, 2026 - 7:25 PM IST  
 **Maintained by:** MeetingMind Team
