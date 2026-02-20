@@ -162,7 +162,9 @@ def create_comprehensive_test_meeting():
         'meetingId': meeting_id,
         'teamId': TEAM_ID,
         'title': 'Comprehensive Feature Test Meeting',
+        'status': 'DONE',  # CRITICAL: Must be DONE for frontend to show it
         'createdAt': now.isoformat(),
+        'updatedAt': now.isoformat(),
         'actionItems': action_items,
         'decisions': [
             'Decided to use AWS Lambda for serverless architecture',
@@ -178,7 +180,8 @@ def create_comprehensive_test_meeting():
         'incompleteActions': incomplete_count,
         'transcript': 'This is a comprehensive test meeting designed to exercise all MeetingMind features...',
         'duration': 30,
-        'attendees': ['Zeeshan', 'Alishba', 'Aayush', 'Sarah']
+        'attendees': ['Zeeshan', 'Alishba', 'Aayush', 'Sarah'],
+        'audioUrl': f's3://meetingmind-audio-707411439284/{meeting_id}.mp3'
     }
     
     return meeting
