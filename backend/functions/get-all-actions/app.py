@@ -39,7 +39,7 @@ def generate_epitaph(action, days_old):
     Uses multi-model fallback: Haiku → Nova Lite → Nova Micro
     Returns epitaph string or None if all models fail.
     """
-    task = action.get('task', 'Unknown task')
+    task = action.get('task') or action.get('text', 'Unknown task')  # V1 uses 'text', V2 uses 'task'
     owner = action.get('owner', 'nobody')
     
     # Truncate task if too long
@@ -219,7 +219,7 @@ def lambda_handler(event, context):
                 # Add meeting context to action
                 action_with_context = {
                     'id': action.get('id'),
-                    'task': action.get('task'),
+                    'task': action.get('task') or action.get('text'),  # V1 uses 'text', V2 uses 'task'
                     'owner': action.get('owner', 'Unassigned'),
                     'deadline': action.get('deadline'),
                     'completed': is_complete,
@@ -259,7 +259,16 @@ def lambda_handler(event, context):
                 continue
                 
             try:
-                created_dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+                # Parse created_at - handle both timezone-aware and naive formats
+                created_at_str = created_at.replace('Z', '+00:00')
+                try:
+                    created_dt = datetime.fromisoformat(created_at_str)
+                except ValueError:
+                    # Try parsing without timezone
+                    created_dt = datetime.fromisoformat(created_at)
+                    # Make it timezone-aware (assume UTC)
+                    created_dt = created_dt.replace(tzinfo=timezone.utc)
+                
                 days_old = (now - created_dt).days
                 
                 # Only generate for graveyard items (>30 days)

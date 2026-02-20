@@ -42,8 +42,51 @@ def lambda_handler(event, context):
     status     = body.get('status')  # New: support status field
 
     table    = dynamodb.Table(TABLE_NAME)
+    
+    # First try to get meeting by userId (uploader)
     response = table.get_item(Key={'userId': user_id, 'meetingId': meeting_id})
     item     = response.get('Item')
+    meeting_owner_id = user_id  # Assume current user is owner
+
+    # If not found, scan for the meeting (for team members)
+    if not item:
+        try:
+            # Scan for the meeting by meetingId
+            response = table.scan(
+                FilterExpression='meetingId = :mid',
+                ExpressionAttributeValues={':mid': meeting_id}
+            )
+            items = response.get('Items', [])
+            if items:
+                item = items[0]
+                meeting_owner_id = item['userId']  # Store actual owner's userId
+                
+                # Verify user is a team member if meeting has teamId
+                if item.get('teamId'):
+                    teams_table = dynamodb.Table(os.environ['TEAMS_TABLE'])
+                    team_response = teams_table.get_item(
+                        Key={'teamId': item['teamId']}
+                    )
+                    if 'Item' in team_response:
+                        team = team_response['Item']
+                        members = team.get('members', [])
+                        
+                        # Check if user is a member
+                        # Members can be either strings (old format) or dicts (new format)
+                        member_ids = []
+                        for member in members:
+                            if isinstance(member, dict):
+                                member_ids.append(member.get('userId'))
+                            else:
+                                member_ids.append(member)
+                        
+                        if user_id not in member_ids:
+                            return _response(403, {'error': 'Not authorized to update this meeting'})
+                    else:
+                        # Team not found - deny access
+                        return _response(403, {'error': 'Team not found'})
+        except Exception as e:
+            print(f"Error scanning for meetingId: {e}")
 
     if not item:
         return _response(404, {'error': 'Meeting not found'})
@@ -76,8 +119,9 @@ def lambda_handler(event, context):
     if not updated:
         return _response(404, {'error': f'Action item {action_id} not found'})
 
+    # Use meeting owner's userId for the update (not current user's)
     table.update_item(
-        Key={'userId': user_id, 'meetingId': meeting_id},
+        Key={'userId': meeting_owner_id, 'meetingId': meeting_id},
         UpdateExpression='SET actionItems = :a, updatedAt = :t',
         ExpressionAttributeValues={
             ':a': actions,

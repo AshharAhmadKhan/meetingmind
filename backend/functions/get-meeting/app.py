@@ -56,14 +56,34 @@ def lambda_handler(event, context):
                 # Verify user is a team member if meeting has teamId
                 if item.get('teamId'):
                     teams_table = dynamodb.Table(os.environ['TEAMS_TABLE'])
-                    membership_response = teams_table.get_item(
-                        Key={'teamId': item['teamId'], 'userId': user_id}
+                    team_response = teams_table.get_item(
+                        Key={'teamId': item['teamId']}
                     )
-                    if not membership_response.get('Item'):
+                    if 'Item' in team_response:
+                        team = team_response['Item']
+                        members = team.get('members', [])
+                        
+                        # Check if user is a member
+                        # Members can be either strings (old format) or dicts (new format)
+                        member_ids = []
+                        for member in members:
+                            if isinstance(member, dict):
+                                member_ids.append(member.get('userId'))
+                            else:
+                                member_ids.append(member)
+                        
+                        if user_id not in member_ids:
+                            return {
+                                'statusCode': 403,
+                                'headers': CORS_HEADERS,
+                                'body': json.dumps({'error': 'Not authorized to view this meeting'})
+                            }
+                    else:
+                        # Team not found - deny access
                         return {
                             'statusCode': 403,
                             'headers': CORS_HEADERS,
-                            'body': json.dumps({'error': 'Not authorized to view this meeting'})
+                            'body': json.dumps({'error': 'Team not found'})
                         }
         except Exception as e:
             print(f"Error scanning for meetingId: {e}")

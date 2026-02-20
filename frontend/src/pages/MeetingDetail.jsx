@@ -5,21 +5,30 @@ import { getMeeting, updateAction } from '../utils/api.js'
 
 function fmtDate(iso) {
   if (!iso) return null
-  const d = new Date(iso)
-  return isNaN(d) ? null : d.toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})
+  try {
+    const d = new Date(iso)
+    if (isNaN(d.getTime())) return null
+    return d.toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})
+  } catch {
+    return null
+  }
 }
 
 function dlInfo(dl) {
   if (!dl) return null
-  const d = new Date(dl)
-  if (isNaN(d)) return null
-  const days = Math.ceil((d - new Date()) / 86400000)
-  return {
-    days,
-    color: days < 0 ? '#e87a6a' : days <= 3 ? '#e8c06a' : '#c8f04a',
-    label: days < 0 ? `${Math.abs(days)}d overdue`
-         : days === 0 ? 'Today' : days === 1 ? 'Tomorrow'
-         : d.toLocaleDateString('en-GB',{day:'numeric',month:'short'})
+  try {
+    const d = new Date(dl)
+    if (isNaN(d.getTime())) return null
+    const days = Math.ceil((d - new Date()) / 86400000)
+    return {
+      days,
+      color: days < 0 ? '#e87a6a' : days <= 3 ? '#e8c06a' : '#c8f04a',
+      label: days < 0 ? `${Math.abs(days)}d overdue`
+           : days === 0 ? 'Today' : days === 1 ? 'Tomorrow'
+           : d.toLocaleDateString('en-GB',{day:'numeric',month:'short'})
+    }
+  } catch {
+    return null
   }
 }
 
@@ -44,16 +53,20 @@ function getRiskBadge(action) {
 
 function getAgeBadge(createdAt) {
   if (!createdAt) return null
-  const created = new Date(createdAt)
-  if (isNaN(created)) return null
-  
-  const days = Math.floor((new Date() - created) / 86400000)
-  if (days === 0) return { label: 'Today', color: '#6ab4e8' }
-  if (days === 1) return { label: '1 day old', color: '#8a8a74' }
-  if (days < 7) return { label: `${days} days old`, color: '#8a8a74' }
-  if (days < 14) return { label: `${Math.floor(days/7)} week old`, color: '#e8c06a' }
-  if (days < 30) return { label: `${Math.floor(days/7)} weeks old`, color: '#e8c06a' }
-  return { label: `${Math.floor(days/30)} month${Math.floor(days/30)>1?'s':''} old`, color: '#e87a6a' }
+  try {
+    const created = new Date(createdAt)
+    if (isNaN(created.getTime())) return null
+    
+    const days = Math.floor((new Date() - created) / 86400000)
+    if (days === 0) return { label: 'Today', color: '#6ab4e8' }
+    if (days === 1) return { label: '1 day old', color: '#8a8a74' }
+    if (days < 7) return { label: `${days} days old`, color: '#8a8a74' }
+    if (days < 14) return { label: `${Math.floor(days/7)} week old`, color: '#e8c06a' }
+    if (days < 30) return { label: `${Math.floor(days/7)} weeks old`, color: '#e8c06a' }
+    return { label: `${Math.floor(days/30)} month${Math.floor(days/30)>1?'s':''} old`, color: '#e87a6a' }
+  } catch {
+    return null
+  }
 }
 
 function calcHealthScore(actions, decisions) {
@@ -142,20 +155,40 @@ export default function MeetingDetail() {
   )
 
   const actions   = meeting.actionItems || []
-  const decisions = meeting.decisions   || []
   const followUps = meeting.followUps   || []
-  const roi       = meeting.roi || null
-  const done      = actions.filter(a => a.completed).length
-  const pct       = actions.length ? Math.round(done/actions.length*100) : 0
+  
+  // Normalize V1 decisions to V2 format
+  // V1: [{id, text, timestamp}], V2: [string]
+  const rawDecisions = meeting.decisions || []
+  const decisions = rawDecisions.map(d => 
+    typeof d === 'string' ? d : (d.text || d)
+  )
+  
+  // Normalize V1 ROI to V2 format
+  // V1: number (-100), V2: {roi, value, cost, decision_count, clear_action_count}
+  const roi = meeting.roi && typeof meeting.roi === 'object' 
+    ? meeting.roi 
+    : null
+  
+  // Normalize V1 action items to V2 format
+  const normalizedActions = actions.map(a => ({
+    ...a,
+    task: a.task || a.text,  // V1 uses 'text', V2 uses 'task'
+    completed: a.completed !== undefined ? a.completed : (a.status === 'DONE' || a.status === 'COMPLETED'),
+    status: a.status === 'PENDING' ? 'todo' : (a.status === 'DONE' ? 'done' : a.status)
+  }))
+  
+  const done      = normalizedActions.filter(a => a.completed).length
+  const pct       = normalizedActions.length ? Math.round(done/normalizedActions.length*100) : 0
   const dateStr   = fmtDate(meeting.createdAt || meeting.updatedAt)
-  const health    = calcHealthScore(actions, decisions)
-  const atRisk    = actions.filter(a => {
+  const health    = calcHealthScore(normalizedActions, decisions)
+  const atRisk    = normalizedActions.filter(a => {
     const risk = getRiskBadge(a)
     return risk && (risk.label === 'HIGH RISK' || risk.label === 'CRITICAL')
   }).length
 
   // Calculate real sub-scores
-  const clearActions = actions.filter(a => 
+  const clearActions = normalizedActions.filter(a => 
     a.owner && a.owner !== 'Unassigned' && a.deadline
   ).length
   
@@ -166,23 +199,23 @@ export default function MeetingDetail() {
     },
     { 
       l: 'Action Ownership', 
-      v: actions.length > 0 
-        ? Math.round((actions.filter(a => a.owner && a.owner !== 'Unassigned').length / actions.length) * 100) / 10
+      v: normalizedActions.length > 0 
+        ? Math.round((normalizedActions.filter(a => a.owner && a.owner !== 'Unassigned').length / normalizedActions.length) * 100) / 10
         : 0
     },
     { 
       l: 'Risk Management', 
-      v: actions.length > 0
-        ? Math.round((1 - (atRisk / actions.length)) * 100) / 10
+      v: normalizedActions.length > 0
+        ? Math.round((1 - (atRisk / normalizedActions.length)) * 100) / 10
         : 10
     },
   ]
 
   const insights = [
-    actions.some(a => !a.deadline)
+    normalizedActions.some(a => !a.deadline)
       ? '2 actions lack specific deadlines — assign dates to improve accountability'
       : 'All action items have deadlines assigned ✓',
-    actions.some(a => !a.owner || a.owner === 'Unassigned')
+    normalizedActions.some(a => !a.owner || a.owner === 'Unassigned')
       ? 'One action item has no owner — unassigned tasks are 3× less likely to complete'
       : 'All action items have clear owners ✓',
     decisions.length >= 3
@@ -279,7 +312,7 @@ export default function MeetingDetail() {
           </div>
         </div>
 
-        {actions.length > 0 && (
+        {normalizedActions.length > 0 && (
           <div style={s.prog}>
             <div style={{display:'flex',justifyContent:'space-between',marginBottom:8}}>
               <span style={{fontSize:9,letterSpacing:'0.14em',color:'#555548',textTransform:'uppercase'}}>
@@ -287,7 +320,7 @@ export default function MeetingDetail() {
               </span>
               <span style={{fontSize:10,letterSpacing:'0.06em'}}>
                 <span style={{color:'#c8f04a'}}>{done}</span>
-                <span style={{color:'#555548'}}>/{actions.length} · {pct}%</span>
+                <span style={{color:'#555548'}}>/{normalizedActions.length} · {pct}%</span>
               </span>
             </div>
             <div style={{height:3,background:'#1a1a14',borderRadius:2}}>
@@ -315,7 +348,7 @@ export default function MeetingDetail() {
       <div style={s.chartsRow}>
         
         {/* SPEAKER BREAKDOWN - Only show if we have owner data */}
-        {actions.some(a => a.owner && a.owner !== 'Unassigned') && (
+        {normalizedActions.some(a => a.owner && a.owner !== 'Unassigned') && (
           <div style={s.chartCard}>
             <p style={s.chartLabel}>TASK DISTRIBUTION</p>
             <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
@@ -338,7 +371,7 @@ export default function MeetingDetail() {
                 
                 // Group actions by owner (only valid owners)
                 const ownerCounts = {}
-                actions.forEach(a => {
+                normalizedActions.forEach(a => {
                   if (isValidOwner(a.owner)) {
                     ownerCounts[a.owner] = (ownerCounts[a.owner] || 0) + 1
                   }
@@ -401,12 +434,12 @@ export default function MeetingDetail() {
         <section style={s.col}>
           <div style={s.colHdr}>
             <h2 style={s.colTitle}>Action Items</h2>
-            <span style={s.colCount}>{done}/{actions.length}</span>
+            <span style={s.colCount}>{done}/{normalizedActions.length}</span>
           </div>
-          {actions.length === 0
+          {normalizedActions.length === 0
             ? <p style={s.empty}>No action items extracted</p>
             : <ul style={s.list}>
-                {actions.map((a,i) => {
+                {normalizedActions.map((a,i) => {
                   const dl = dlInfo(a.deadline)
                   const risk = getRiskBadge(a)
                   const age = getAgeBadge(a.createdAt)
@@ -421,7 +454,7 @@ export default function MeetingDetail() {
                         <p style={{fontSize:13,lineHeight:1.5,marginBottom:6,
                           color:a.completed?'#555548':'#e8e4d0',
                           textDecoration:a.completed?'line-through':'none'}}>
-                          {a.task}
+                          {a.task || a.text}
                         </p>
                         <div style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center'}}>
                           {a.owner && a.owner!=='Unassigned' &&

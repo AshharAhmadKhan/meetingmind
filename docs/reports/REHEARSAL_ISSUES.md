@@ -14,6 +14,11 @@
 - ✅ Issue #19: Leaderboard Shows Task Names
 - ✅ Issue #22: Team Members Can't See Team Meetings
 
+### Phase 2 High-Impact Fixes - COMPLETE
+- ✅ Issue #18: Kanban Drag-and-Drop (Team member update actions fixed)
+- ✅ Issue #6: Resurrect Function (Fixed with team member access)
+- ✅ Issue #20: Graveyard Datetime Errors (Fixed epitaph generation)
+
 ---
 
 ## REMAINING ISSUES - Category A (Can Fix with Existing Data)
@@ -23,25 +28,6 @@
 - **Description:** After clicking "Done" on team creation, invite code disappears. No way to retrieve it later.
 - **Expected:** Should be able to view invite code from team settings/details page
 - **Fix Required:** Add "View Invite Code" button in team management
-
-### Issue #6: Resurrect Function Fails
-- **Severity:** MEDIUM (feature broken)
-- **Description:** Graveyard shows "Resurrect" button but clicking it shows "Failed to resurrect"
-- **Expected:** Should be able to resurrect old action items back to active
-- **Fix Required:** Check resurrect API endpoint and error handling
-
-### Issue #18: Kanban Drag-and-Drop Completely Broken
-- **Severity:** HIGH (core feature broken)
-- **Description:** Cannot drag any cards on Kanban board. Cards are completely stuck in place. No drag cursor, no movement.
-- **Expected:** Should be able to drag cards between columns (To Do → In Progress → Blocked → Done)
-- **Impact:** Cannot demonstrate choreography, cannot update task status
-- **Fix Required:** Check KanbanBoard.jsx drag handlers (onDragStart, onDragOver, onDrop)
-
-### Issue #20: Graveyard Has 13 Items (Expected 11 for V1, 0 for V2)
-- **Severity:** MEDIUM (data accuracy)
-- **Description:** Graveyard shows 13 tombstones. V1 seeding created 11. Where did 2 extra come from?
-- **Possible Causes:** Old test data not cleaned, duplicate items
-- **Fix Required:** Check graveyard query logic, clean test data
 
 ### Issue #21: All Debt Dashboard Charts Show Mock Data
 - **Severity:** HIGH (demo blocker)
@@ -124,25 +110,22 @@
 
 ## PRIORITY ORDER FOR REMAINING FIXES
 
-### Phase 2: High-Impact Fixes (Next)
-1. Issue #18 - Kanban drag-and-drop (45 min)
-2. Issue #21 - Debt dashboard real data (45 min)
-
-### Phase 3: Backend Fixes
-3. Issue #6 - Resurrect function (60 min)
-4. Issue #14 - Health score formula (45 min)
-5. Issue #15 - ROI calculation (45 min)
+### Phase 3: Backend Fixes (Next)
+1. Issue #14 - Health score formula (45 min)
+2. Issue #15 - ROI calculation (45 min)
+3. Issue #21 - Debt dashboard real data (45 min)
 
 ### Phase 4: Polish
-6. Issue #2 - View invite code (30 min)
-7. Issue #20 - Graveyard cleanup (30 min)
+4. Issue #2 - View invite code (30 min)
 
 ---
 
 ## NOTES
 
 - Phase 1 Quick Wins: COMPLETE (5 issues fixed)
+- Phase 2 High-Impact Fixes: COMPLETE (3 issues fixed)
 - Main account (itzashhar@gmail.com) intentionally NOT in teams
 - All 3 test accounts successfully in both teams
 - V1 data seeded correctly with teamId
 - V2 data has teamId assigned
+- Team members can now fully interact with meetings (update actions, Kanban, graveyard)

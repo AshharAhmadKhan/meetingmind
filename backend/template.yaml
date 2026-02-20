@@ -349,6 +349,8 @@ Resources:
       Policies:
         - DynamoDBReadPolicy:
             TableName: !Ref MeetingsTable
+        - DynamoDBReadPolicy:
+            TableName: !Ref TeamsTable
       Events:
         Api:
           Type: Api
@@ -367,6 +369,8 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref MeetingsTable
+        - DynamoDBReadPolicy:
+            TableName: !Ref TeamsTable
       Events:
         Api:
           Type: Api
@@ -403,6 +407,8 @@ Resources:
       Policies:
         - DynamoDBReadPolicy:
             TableName: !Ref MeetingsTable
+        - DynamoDBReadPolicy:
+            TableName: !Ref TeamsTable
       Events:
         Api:
           Type: Api
