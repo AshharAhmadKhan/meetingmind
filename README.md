@@ -1,56 +1,49 @@
-# 🪦 MeetingMind
+# MeetingMind
 
-**AI-Powered Meeting Intelligence Platform**  
-*Where forgotten action items go to die*
+**AI-Powered Meeting Intelligence Platform**
 
 [![AWS](https://img.shields.io/badge/AWS-14_Services-FF9900?logo=amazon-aws)](https://aws.amazon.com)
 [![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python)](https://www.python.org)
 [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react)](https://react.dev)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Code of Conduct](https://img.shields.io/badge/Code%20of%20Conduct-Contributor%20Covenant-purple.svg)](CODE_OF_CONDUCT.md)
-[![Competition](https://img.shields.io/badge/AWS_AIdeas-2026-FF9900)](https://aws.amazon.com)
 
-> Transform meeting chaos into organizational memory. Upload audio, get AI-extracted decisions, action items, and risk predictions. Built entirely on AWS serverless.
+MeetingMind processes meeting audio to extract decisions, action items, and risk predictions using AWS serverless architecture. The system uses Amazon Transcribe for speech-to-text and Amazon Bedrock for analysis.
 
-**🌐 Live Demo:** [dcfx593ywvy92.cloudfront.net](https://dcfx593ywvy92.cloudfront.net)
+**Live Demo:** [dcfx593ywvy92.cloudfront.net](https://dcfx593ywvy92.cloudfront.net)
 
 ---
 
-## ✨ Key Features
+## Key Features
 
-### 🎯 The Graveyard (Our Killer Feature)
-Action items abandoned for >30 days go to the "Graveyard" with tombstones showing how long they've been buried. Accountability through shame.
+### The Graveyard
+Action items abandoned for more than 30 days are moved to a "Graveyard" view with tombstones showing abandonment duration.
 
-### 🤖 AI-Powered Intelligence
+### AI Processing
 - **Transcription:** Amazon Transcribe with speaker diarization
 - **Analysis:** Multi-model fallback (Claude Haiku → Nova Lite → Nova Micro)
-- **Duplicate Detection:** Semantic search with Titan Embeddings (1536-dim)
-- **Risk Prediction:** 4-factor algorithm (deadline, owner, vagueness, staleness)
+- **Duplicate Detection:** Semantic search using Titan Embeddings (1536-dim vectors)
+- **Risk Prediction:** 4-factor algorithm (deadline proximity, owner assignment, task clarity, staleness)
 
-### 📊 Analytics & Insights
-- **Meeting Debt:** Calculate $ cost of incomplete actions ($75/hour × 3.2 hours blocked)
-- **Pattern Detection:** 5 toxic patterns (Planning Paralysis, Action Item Amnesia, etc.)
-- **Team Leaderboard:** Weighted scoring with achievements (🏆 Perfectionist, ⚡ Speed Demon)
-- **Completion Tracking:** Real-time progress vs industry benchmark (67%)
+### Analytics
+- **Meeting Debt:** Calculates cost of incomplete actions based on $75/hour × estimated blocked time
+- **Pattern Detection:** Identifies 5 recurring patterns (Planning Paralysis, Action Item Amnesia, etc.)
+- **Team Leaderboard:** Weighted scoring with achievement tracking
+- **Completion Tracking:** Progress monitoring against 67% industry benchmark
 
-### 🎨 Beautiful UI
-- Dark charcoal + lime green design system
+### UI Design
+- Dark charcoal + lime green color scheme
 - Playfair Display + DM Mono typography
 - Drag-and-drop Kanban board
-- Grain texture overlay for depth
+- Grain texture overlay
 
 ---
 
-## 🧪 Testing & Quality
+## Testing
 
-**Enterprise-Grade Testing** | **36 Automated Tests** | **100% Coverage**
+**Test Coverage:** 36 automated tests covering infrastructure, APIs, features, security, and data integrity.
 
-MeetingMind follows strict testing practices similar to major open source projects:
-
-- ✅ **CI/CD Test Suite:** All commits must pass 36 automated tests
-- ✅ **Pre-Commit Hooks:** Tests run automatically before each commit
-- ✅ **100% Coverage:** Infrastructure, APIs, features, security, data integrity
-- ✅ **Fast Execution:** Full test suite runs in < 2 minutes
+MeetingMind uses pre-commit hooks to run tests automatically before each commit. The full test suite executes in under 2 minutes.
 
 ### Quick Start
 ```bash
@@ -62,13 +55,13 @@ MeetingMind follows strict testing practices similar to major open source projec
 python scripts/testing/run-ci-tests.py
 ```
 
-See [docs/testing/TESTING.md](docs/testing/TESTING.md) for complete testing guide.
+See [docs/testing/TESTING.md](docs/testing/TESTING.md) for complete testing documentation.
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
-**14 AWS Services | 18 Lambda Functions | 100% Serverless**
+**14 AWS Services | 18 Lambda Functions | Serverless**
 
 ```
 Audio Upload → S3 → SQS → Lambda → Transcribe → Bedrock → DynamoDB → SES
@@ -90,7 +83,7 @@ S3 • Lambda • API Gateway • DynamoDB • Cognito • Transcribe • Bedroc
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 - AWS Account with Bedrock access
@@ -117,11 +110,11 @@ aws s3 sync dist/ s3://YOUR_FRONTEND_BUCKET --delete
 aws cloudfront create-invalidation --distribution-id YOUR_DIST_ID --paths "/*"
 ```
 
-**📖 Detailed Instructions:** See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
+**Detailed Instructions:** See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 meetingmind/
@@ -151,36 +144,29 @@ meetingmind/
 
 ---
 
-## 📚 Documentation
+## Documentation
 
 | Document | Description |
 |----------|-------------|
-| [`AI_AGENT_HANDBOOK.md`](AI_AGENT_HANDBOOK.md) | **🤖 For AI Agents** - Essential rules, architecture, common issues |
-| [`docs/PROJECT_BOOTSTRAP.md`](docs/PROJECT_BOOTSTRAP.md) | **Single source of truth** - Start here |
+| [`docs/guides/AI_AGENT_HANDBOOK.md`](docs/guides/AI_AGENT_HANDBOOK.md) | For AI agents - architecture, common issues |
+| [`docs/PROJECT_BOOTSTRAP.md`](docs/PROJECT_BOOTSTRAP.md) | Single source of truth - start here |
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | Technical architecture deep-dive |
 | [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) | Deployment guide |
 | [`docs/testing/TESTING.md`](docs/testing/TESTING.md) | Testing procedures |
 
 ---
 
-## 🎯 Competition
+## Competition
 
 **AWS AIdeas Competition 2026**
 - **Category:** AI-Powered Productivity Tools
 - **Timeline:** March 1-13 (article submission), March 13-20 (voting)
-- **Goal:** Top 300 by community likes
-
-**Our Differentiators:**
-1. The Graveyard (unique shame mechanic)
-2. Meeting debt quantification ($ value)
-3. Pattern detection (statistical insights)
-4. Production-ready (88/100 score)
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
-This is a competition entry, but feedback is welcome!
+This is a competition entry. Feedback is welcome.
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
@@ -190,28 +176,27 @@ This is a competition entry, but feedback is welcome!
 
 ---
 
-## 📊 Status
+## Status
 
 **Production Readiness:** 95/100  
-**Feature Completeness:** 100% (all 11 core features working)  
-**Test Coverage:** Comprehensive test suite with 60+ test scripts  
-**Last Updated:** February 20, 2026 - 7:00 PM IST
+**Feature Completeness:** All 11 core features functional  
+**Test Coverage:** 36 automated tests  
+**Last Updated:** February 20, 2026
 
 **Recent Updates (Feb 19-20, 2026):**
-- ✅ All Phase 1-4 fixes complete (18 issues resolved)
-- ✅ Team member access fully working (Kanban, Graveyard, Actions)
-- ✅ Debt Dashboard showing real data (not mock)
-- ✅ View Team Invite Code feature added
-- ✅ Health Score & ROI formulas verified correct
-- ✅ Duplicate Detection documented (Bedrock disabled for cost)
-- ✅ Comprehensive test meeting created for all features
-- ✅ Repository reorganized and cleaned up
+- Phase 1-4 fixes complete (18 issues resolved)
+- Team member access working (Kanban, Graveyard, Actions)
+- Debt Dashboard showing real data
+- View Team Invite Code feature added
+- Health Score & ROI formulas verified
+- Duplicate Detection documented
+- Repository reorganized
 
 ---
 
-## 📞 Contact
+## Contact
 
-**Developer & Maintainer:** Ashhar Ahmad Khan  
+**Developer:** Ashhar Ahmad Khan  
 **Email:** itzashhar@gmail.com  
 **GitHub:** [github.com/AshharAhmadKhan](https://github.com/AshharAhmadKhan)  
 **LinkedIn:** [linkedin.com/in/ashhar-ahmad-khan](https://www.linkedin.com/in/ashhar-ahmad-khan/)  
@@ -220,12 +205,10 @@ This is a competition entry, but feedback is welcome!
 
 ---
 
-## 📄 License
+## License
 
 MIT License - see LICENSE file for details
 
 ---
 
-**Built with ❤️ using AWS Serverless**
-
-*Transforming meeting chaos into organizational memory, one tombstone at a time.*
+Built using AWS Serverless
