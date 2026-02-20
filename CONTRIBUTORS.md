@@ -20,9 +20,6 @@
 
 ## Special Thanks
 
-### Testing & Feedback
-- **Test Accounts:** thehiddenif@gmail.com, whispersbehindthecode@gmail.com, ashkagakoko@gmail.com
-- **Purpose:** Multi-user testing, team collaboration verification, edge case discovery
 
 ### AWS Community
 - AWS AIdeas Competition organizers and community
