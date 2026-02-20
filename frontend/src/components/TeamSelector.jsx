@@ -1,16 +1,19 @@
 import { useState, useEffect, useCallback } from 'react'
-import { listUserTeams, createTeam, joinTeam } from '../utils/api'
+import { listUserTeams, createTeam, joinTeam, getTeam } from '../utils/api'
 
 export default function TeamSelector({ selectedTeamId, onTeamChange }) {
   const [teams, setTeams] = useState([])
   const [loading, setLoading] = useState(true)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showJoinModal, setShowJoinModal] = useState(false)
+  const [showViewCodeModal, setShowViewCodeModal] = useState(false)
   const [newTeamName, setNewTeamName] = useState('')
   const [inviteCode, setInviteCode] = useState('')
   const [createdInviteCode, setCreatedInviteCode] = useState('')
+  const [viewingTeamName, setViewingTeamName] = useState('')
   const [createError, setCreateError] = useState('')
   const [joinError, setJoinError] = useState('')
+  const [viewCodeError, setViewCodeError] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
@@ -125,22 +128,45 @@ export default function TeamSelector({ selectedTeamId, onTeamChange }) {
     setJoinError('')
   }, [])
 
+  const handleViewCode = useCallback(async (teamId, teamName) => {
+    try {
+      setViewCodeError('')
+      setViewingTeamName(teamName)
+      const data = await getTeam(teamId)
+      setCreatedInviteCode(data.inviteCode)
+      setShowViewCodeModal(true)
+    } catch (err) {
+      setViewCodeError(err.response?.data?.error || 'Failed to fetch invite code')
+    }
+  }, [])
+
+  const closeViewCodeModal = useCallback(() => {
+    setShowViewCodeModal(false)
+    setCreatedInviteCode('')
+    setViewingTeamName('')
+    setViewCodeError('')
+  }, [])
+
   // Keyboard handlers
   useEffect(() => {
     const handleEscape = (e) => {
       if (e.key === 'Escape') {
         if (showCreateModal) closeCreateModal()
         if (showJoinModal) closeJoinModal()
+        if (showViewCodeModal) closeViewCodeModal()
       }
     }
     
-    if (showCreateModal || showJoinModal) {
+    if (showCreateModal || showJoinModal || showViewCodeModal) {
       document.addEventListener('keydown', handleEscape)
       return () => document.removeEventListener('keydown', handleEscape)
     }
-  }, [showCreateModal, showJoinModal, closeCreateModal, closeJoinModal])
+  }, [showCreateModal, showJoinModal, showViewCodeModal, closeCreateModal, closeJoinModal, closeViewCodeModal])
 
   if (loading) return <div style={s.loading}>Loading teams...</div>
+
+  const hasTeams = teams.length > 0
+  const selectedTeam = teams.find(t => t.teamId === selectedTeamId)
 
   return (
     <div style={s.root}>
@@ -166,6 +192,16 @@ export default function TeamSelector({ selectedTeamId, onTeamChange }) {
           )
         })}
       </select>
+
+      {selectedTeam && (
+        <button 
+          onClick={() => handleViewCode(selectedTeam.teamId, selectedTeam.teamName)} 
+          style={s.viewCodeBtn}
+          title="View invite code"
+        >
+          View Code
+        </button>
+      )}
 
       <button onClick={() => setShowCreateModal(true)} style={s.createBtn}>
         Create Team
@@ -274,6 +310,31 @@ export default function TeamSelector({ selectedTeamId, onTeamChange }) {
           </div>
         </div>
       )}
+
+      {/* View Invite Code Modal */}
+      {showViewCodeModal && (
+        <div style={s.modalOverlay} onClick={closeViewCodeModal}>
+          <div style={s.modal} onClick={(e) => e.stopPropagation()}>
+            <h3 style={s.modalTitle}>{viewingTeamName}</h3>
+            {viewCodeError && <div style={s.error}>{viewCodeError}</div>}
+            <div style={s.successBox}>
+              <p style={s.inviteLabel}>Share this invite code:</p>
+              <div style={s.inviteCodeBox}>
+                <span style={s.inviteCode}>{createdInviteCode}</span>
+                <button onClick={copyInviteCode} style={s.copyBtn}>
+                  Copy
+                </button>
+              </div>
+              <p style={s.inviteNote}>
+                Invite codes are permanent and can be used multiple times
+              </p>
+            </div>
+            <button onClick={closeViewCodeModal} style={s.modalDoneBtn}>
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -304,6 +365,19 @@ const s = {
     cursor: 'pointer',
     outline: 'none',
     flex: 1,
+  },
+  viewCodeBtn: {
+    background: '#8a8a74',
+    border: 'none',
+    borderRadius: 4,
+    padding: '8px 14px',
+    color: '#0c0c09',
+    fontSize: 11,
+    letterSpacing: '0.05em',
+    cursor: 'pointer',
+    fontFamily: "'DM Mono',monospace",
+    fontWeight: 400,
+    transition: 'opacity 0.15s',
   },
   createBtn: {
     background: '#6a9ae8',

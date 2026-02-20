@@ -24,17 +24,8 @@
 - ✅ Issue #14: Health Score Formula (Verified correct - 30/100 for all unassigned)
 - ✅ Issue #15: ROI Calculation (Verified correct - -100% for all unassigned)
 
----
-
----
-
-## REMAINING ISSUES - Category A (Can Fix with Existing Data)
-
-### Issue #2: Cannot See Team Invite Code After Creation
-- **Severity:** MEDIUM (metric accuracy)
-- **Description:** Meeting with all unassigned tasks shows +1433% ROI
-- **Expected:** Unassigned items should have $0 value, ROI should be -100%
-- **Fix Required:** Adjust ROI calculation in process-meeting Lambda
+### Phase 4: Polish - COMPLETE
+- ✅ Issue #2: View Invite Code (Added "View Code" button to TeamSelector)
 
 ---
 
