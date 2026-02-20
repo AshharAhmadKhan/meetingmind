@@ -331,6 +331,32 @@ export default function MeetingDetail() {
         )}
       </div>
 
+      {/* UNASSIGNED WARNING BANNER */}
+      {(() => {
+        const unassignedCount = normalizedActions.filter(a => !a.owner || a.owner === 'Unassigned').length
+        if (unassignedCount === 0) return null
+        
+        return (
+          <div style={s.warningBanner}>
+            <div style={s.warningIcon}>⚠</div>
+            <div style={s.warningContent}>
+              <div style={s.warningTitle}>
+                {unassignedCount} Action Item{unassignedCount > 1 ? 's' : ''} Without Owner
+              </div>
+              <div style={s.warningText}>
+                Tasks without clear ownership are 3× less likely to be completed. 
+                This usually happens when names aren't explicitly mentioned in the recording.
+              </div>
+              <div style={s.warningActions}>
+                <span style={s.warningSuggestion}>
+                  Tip: Re-record with explicit name mentions for better task assignment
+                </span>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
       {/* AUTOPSY CARD - Only show for D/F grades or ghost meetings */}
       {meeting.autopsy && (meeting.healthGrade === 'D' || meeting.healthGrade === 'F' || meeting.isGhost) && (
         <div style={s.autopsySection}>
@@ -642,4 +668,18 @@ const s = {
   autopsyTitle: { fontFamily:"'Playfair Display',serif", fontSize:16, fontWeight:700,
                   color:'#e87a6a', letterSpacing:'-0.2px' },
   autopsyText: { fontSize:13, color:'#c8c4b0', lineHeight:1.75, letterSpacing:'0.01em' },
+  
+  warningBanner: { margin:'24px 36px', background:'linear-gradient(135deg, #1a1a0e 0%, #141410 100%)',
+                   border:'1px solid #3a3a2e', borderLeft:'3px solid #e8c06a', borderRadius:6,
+                   padding:'20px 24px', display:'flex', gap:16, alignItems:'flex-start' },
+  warningIcon: { fontSize:24, color:'#e8c06a', flexShrink:0, lineHeight:1 },
+  warningContent: { flex:1 },
+  warningTitle: { fontFamily:"'Playfair Display',serif", fontSize:15, fontWeight:700,
+                  color:'#f0ece0', marginBottom:8, letterSpacing:'-0.2px' },
+  warningText: { fontSize:12, color:'#a8a894', lineHeight:1.6, marginBottom:12 },
+  warningActions: { display:'flex', alignItems:'center', gap:16, flexWrap:'wrap' },
+  warningLink: { fontSize:11, color:'#c8f04a', textDecoration:'none', fontWeight:500,
+                 letterSpacing:'0.05em', transition:'opacity 0.2s' },
+  warningSuggestion: { fontSize:10, color:'#6b7260', letterSpacing:'0.03em' },
 }
+
