@@ -6,6 +6,8 @@
 [![AWS](https://img.shields.io/badge/AWS-14_Services-FF9900?logo=amazon-aws)](https://aws.amazon.com)
 [![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python)](https://www.python.org)
 [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react)](https://react.dev)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Code of Conduct](https://img.shields.io/badge/Code%20of%20Conduct-Contributor%20Covenant-purple.svg)](CODE_OF_CONDUCT.md)
 [![Competition](https://img.shields.io/badge/AWS_AIdeas-2026-FF9900)](https://aws.amazon.com)
 
 > Transform meeting chaos into organizational memory. Upload audio, get AI-extracted decisions, action items, and risk predictions. Built entirely on AWS serverless.
@@ -211,7 +213,9 @@ This is a competition entry, but feedback is welcome!
 ## 📞 Contact
 
 **Developer & Maintainer:** Ashhar Ahmad Khan  
-**Email:** thecyberprinciples@gmail.com  
+**Email:** itzashhar@gmail.com  
+**GitHub:** [github.com/AshharAhmadKhan](https://github.com/AshharAhmadKhan)  
+**LinkedIn:** [linkedin.com/in/ashhar-ahmad-khan](https://www.linkedin.com/in/ashhar-ahmad-khan/)  
 **AWS Account:** 707411439284  
 **Region:** ap-south-1 (Mumbai)
 

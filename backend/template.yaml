@@ -16,7 +16,7 @@ Globals:
         REGION:         !Ref AWS::Region
         SNS_TOPIC_ARN:  !Ref ReminderTopic
         FRONTEND_URL:   https://dcfx593ywvy92.cloudfront.net
-        SES_FROM_EMAIL: thecyberprinciples@gmail.com
+        SES_FROM_EMAIL: itzashhar@gmail.com
 
 Resources:
 
@@ -570,8 +570,8 @@ Resources:
       Timeout: 10
       Environment:
         Variables:
-          ADMIN_EMAIL: thecyberprinciples@gmail.com
-          SES_FROM_EMAIL: thecyberprinciples@gmail.com
+          ADMIN_EMAIL: itzashhar@gmail.com
+          SES_FROM_EMAIL: itzashhar@gmail.com
       Policies:
         - SESCrudPolicy:
             IdentityName: "*"

@@ -7,11 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Repository refactoring (Phases 1-3)
+  - Professional repository structure
+  - Code quality improvements
+  - GitHub templates and CODE_OF_CONDUCT.md
+
 ### Planned
 - Walk of Shame on leaderboard
 - Display name feature
 - Fuzzy name matching
 - Per-task notifications
+- Technical debt resolution (TD-001, TD-002)
 
 ## [1.0.10] - 2026-02-20 ✅ CURRENT VERSION
 
