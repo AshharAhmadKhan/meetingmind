@@ -358,17 +358,18 @@ def _calculate_health_score(action_items, decisions, created_at):
 
 def _generate_autopsy(action_items, decisions, transcript_text, health_score):
     """
-    Generate meeting autopsy for failed meetings (D/F grades or ghost meetings).
+    Generate meeting autopsy for failed meetings (F grade or ghost meetings).
     Uses multi-model fallback like epitaphs.
     """
-    # Only generate for D/F grades or ghost meetings
+    # Only generate for F grade (< 60) or ghost meetings
     is_ghost = len(decisions) == 0 and len(action_items) == 0
-    if health_score >= 65 and not is_ghost:
+    if health_score >= 60 and not is_ghost:
         return None
     
     # Calculate metrics for autopsy
     total_actions = len(action_items)
     unowned_count = sum(1 for a in action_items if not a.get('owner') or a['owner'] == 'Unassigned')
+    owned_count = total_actions - unowned_count
     decision_count = len(decisions)
     
     # Estimate meeting duration from transcript (rough: 150 words per minute)
@@ -399,13 +400,22 @@ def _generate_autopsy(action_items, decisions, transcript_text, health_score):
     top_speakers = sorted(speaker_percentages.items(), key=lambda x: x[1], reverse=True)[:3]
     speaker_dist = ', '.join([f"{name}: {pct}%" for name, pct in top_speakers]) if top_speakers else "Unknown"
     
+    # CRITICAL: Validate data before sending to AI to prevent hallucinations
     prompt = f"""Write a 2-sentence meeting autopsy. Be direct and slightly uncomfortable.
-Explain specifically why this meeting failed based on:
-- Speaking time distribution: {speaker_dist}
-- Action items with no owner: {unowned_count} of {total_actions}
+
+IMPORTANT: Base your analysis ONLY on these verified facts:
+- Total action items: {total_actions}
+- Action items WITH owners: {owned_count}
+- Action items WITHOUT owners (Unassigned): {unowned_count}
 - Decisions made: {decision_count}
 - Meeting duration: {duration_minutes} minutes
 - Duplicate items: {duplicate_count}
+- Speaking time distribution: {speaker_dist}
+
+DO NOT claim action items are unassigned if owned_count > 0.
+DO NOT contradict the numbers provided above.
+
+Explain specifically why this meeting scored {health_score}/100 based on the facts above.
 
 Format: 'Cause of death: [one sentence]. Prescription: [one sentence].'
 
@@ -795,10 +805,11 @@ def lambda_handler(event, context):
         # Calculate health score
         health_data = _calculate_health_score(action_items, analysis.get('decisions', []), created_at)
         
-        # Generate autopsy for failed meetings (D/F grades or ghost meetings)
+        # Generate autopsy for failed meetings (F grade or ghost meetings)
+        # Only generate for truly failed meetings (score < 60) or ghost meetings
         autopsy = None
         is_ghost = len(analysis.get('decisions', [])) == 0 and len(action_items) == 0
-        if health_data['score'] < 65 or is_ghost:
+        if health_data['score'] < 60 or is_ghost:
             with xray_recorder.capture('generate_autopsy'):
                 autopsy = _generate_autopsy(
                     action_items,
