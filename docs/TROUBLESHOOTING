@@ -1,0 +1,90 @@
+# Debug Frontend State
+
+## Check if Fix is Active
+
+Open browser DevTools (F12) and run these commands in the Console:
+
+### 1. Check if new code is loaded
+```javascript
+// Check if upload destination indicator exists
+document.querySelector('[style*="uploadDestination"]')
+// Should return an element if new code is loaded
+```
+
+### 2. Check localStorage
+```javascript
+// Check what's in localStorage
+localStorage.getItem('selectedTeamId')
+// Should show the teamId or empty string
+```
+
+### 3. Check current state
+```javascript
+// This won't work directly, but check the React DevTools
+// Look for Dashboard component state
+```
+
+### 4. Force clear cache
+```javascript
+// Clear localStorage
+localStorage.clear()
+
+// Hard refresh
+location.reload(true)
+```
+
+## What to Look For
+
+### If Fix is Active:
+- You should see "📤 UPLOADING TO:" text in the upload section
+- It should show either "👥 [Team Name]" or "📋 Personal (Just Me)"
+- This indicator should be visible BEFORE you upload
+
+### If Fix is NOT Active (Old Code):
+- No upload destination indicator
+- Just the upload zone with no team confirmation
+
+## Steps to Get New Code
+
+1. **Clear browser cache completely:**
+   - Chrome: Ctrl+Shift+Delete → Clear browsing data → Cached images and files
+   - Or use Incognito mode
+
+2. **Hard refresh:**
+   - Ctrl+Shift+R (Windows)
+   - Cmd+Shift+R (Mac)
+
+3. **Wait for CloudFront:**
+   - Invalidation started at 18:07 UTC
+   - Should be complete by 18:17 UTC (about 10 minutes)
+   - Current time: Check if 10 minutes have passed
+
+4. **Check CloudFront invalidation status:**
+   ```bash
+   aws cloudfront get-invalidation --distribution-id E3CAAI97MXY83V --id IBABFUCRUFCD4CHZ2RRDUTW0KO
+   ```
+
+## Quick Test
+
+After clearing cache and hard refresh:
+
+1. Look for "📤 UPLOADING TO:" in the upload section
+2. If you see it → Fix is active
+3. If you don't see it → Still using old code, wait longer or try incognito
+
+## Current Issue
+
+Based on the screenshot, you're still using the OLD code because:
+- No upload destination indicator visible
+- Upload went to Personal (teamId = null)
+- This means the frontend didn't send teamId to backend
+
+## Solution
+
+Wait 5 more minutes for CloudFront, then:
+1. Close all browser tabs
+2. Open new incognito window
+3. Go to app
+4. Log in
+5. Look for the upload destination indicator
+6. Try upload again
