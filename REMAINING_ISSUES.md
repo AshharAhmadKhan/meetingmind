@@ -8,9 +8,9 @@
 
 ## Summary
 
-**Total Issues:** 9 remaining  
-**Resolved:** 18 issues (Phases 1-4 complete)  
-**Production Readiness:** 95/100
+**Total Issues:** 7 remaining  
+**Resolved:** 20 issues (Phases 1-4 complete + Category C)  
+**Production Readiness:** 96/100
 
 ---
 
@@ -101,7 +101,7 @@ These issues cannot be fixed with current data because all V2 meetings were reco
 
 ---
 
-## Category C: Documentation/Operational (3 issues)
+## Category C: Documentation/Operational (1 issue)
 
 These are not bugs but operational improvements and documentation tasks.
 
@@ -118,36 +118,26 @@ These are not bugs but operational improvements and documentation tasks.
 - **Estimated Effort:** 30 minutes
 - **Priority:** LOW (operational convenience)
 
-### Issue #7: Verify Debt Dashboard Calculations
-- **Severity:** MEDIUM (verification)
-- **Status:** Partially Complete
-- **Description:** Need to verify debt dashboard calculations are accurate
-- **Current Status:** Backend Lambda deployed and calculating real data
-- **Remaining:** Manual verification of edge cases
-- **Fix Required:** 
-  - Test with various meeting scenarios
-  - Verify $ calculations match formula
-  - Document calculation methodology
-- **Estimated Effort:** 15 minutes
-- **Priority:** LOW (verification task)
+---
 
-### Issue #8: Duplicate Detection
-- **Severity:** LOW (verification)
-- **Status:** VERIFIED - Working as designed
-- **Description:** Duplicate detection uses Bedrock Titan Embeddings
-- **Current Status:** 
-  - ✅ Code is correct and working
-  - ✅ Bedrock intentionally disabled to avoid AWS Marketplace costs
-  - ✅ System uses fallback hash-based embeddings (less accurate)
-  - ✅ Comprehensive documentation created
+## COMPLETED - Category C
+
+### ✅ Issue #7: Verify Debt Dashboard Calculations - COMPLETE
+- **Completed:** February 20, 2026
+- **Test Created:** `scripts/testing/features/verify-debt-calculations.py`
+- **Result:** All calculations verified correct
+- **Formula:** `incomplete_actions × $240 = total_debt`
+- **App Verified:** Dashboard shows $4,800 for 20 incomplete actions
+- **Documentation:** `docs/verification/ISSUE_7_DEBT_CALCULATIONS.md`
+
+### ✅ Issue #8: Duplicate Detection - VERIFIED
+- **Completed:** February 19, 2026
+- **Status:** Working as designed
+- **Root Cause:** Bedrock intentionally disabled to avoid AWS Marketplace costs
+- **Current Behavior:** System uses fallback hash-based embeddings (less accurate)
 - **Impact:** Duplicate detection less accurate without Bedrock
 - **Fix Required:** None - working as designed
-- **To Enable:** 
-  1. Accept AWS Marketplace terms for Bedrock Titan
-  2. Enable Bedrock in Lambda environment
-  3. Duplicate detection will use semantic embeddings
-- **Estimated Effort:** N/A (already working)
-- **Priority:** LOW (cost optimization decision)
+- **To Enable:** Accept AWS Marketplace terms for Bedrock Titan
 - **Documentation:** `docs/features/DUPLICATE_DETECTION_EXPLAINED.md`
 
 ---

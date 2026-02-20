@@ -566,6 +566,13 @@ Resources:
       CodeUri: functions/pre-signup/
       Handler: app.lambda_handler
       Timeout: 10
+      Environment:
+        Variables:
+          ADMIN_EMAIL: thecyberprinciples@gmail.com
+          SES_FROM_EMAIL: thecyberprinciples@gmail.com
+      Policies:
+        - SESCrudPolicy:
+            IdentityName: "*"
 
   # ── LAMBDA: POST-CONFIRMATION ──────────────────────────────
   PostConfirmationFunction:

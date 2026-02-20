@@ -28,7 +28,8 @@
 ### Phase 4: Polish - COMPLETE
 - ✅ Issue #2: View Invite Code (Added "View Code" button to TeamSelector)
 
-### Category C: Documentation/Operational - VERIFIED
+### Category C: Documentation/Operational - COMPLETE
+- ✅ Issue #7: Debt Dashboard Calculations (Verified correct - all formulas working)
 - ✅ Issue #8: Duplicate Detection (Verified working - embeddings disabled to avoid Bedrock costs)
 
 ---
@@ -74,15 +75,26 @@
 - **Workaround:** Check Cognito manually with: `python scripts/setup/approve-user.py <email>`
 - **Fix Required:** Add admin notification to pre-signup Lambda
 
-### Issue #7: Verify Debt Dashboard Calculations
-- **Severity:** MEDIUM (verification)
-- **Description:** Need to verify debt dashboard calculations are accurate
-- **Fix Required:** Manual verification of calculations
-
 ### Issue #10: Document Explicit Name Requirement
 - **Severity:** MEDIUM (documentation)
 - **Description:** Users need to know to explicitly mention names in recordings
 - **Fix Required:** Add to user guide
+
+---
+
+## COMPLETED ISSUES - Category C
+
+### ✅ Issue #7: Verify Debt Dashboard Calculations - COMPLETE
+- **Completed:** February 20, 2026
+- **Test:** `scripts/testing/features/verify-debt-calculations.py`
+- **Result:** All calculations verified correct
+- **Formula:** `incomplete_actions × $240 = total_debt`
+- **Documentation:** `docs/verification/ISSUE_7_DEBT_CALCULATIONS.md`
+
+### ✅ Issue #8: Duplicate Detection - VERIFIED
+- **Completed:** February 19, 2026
+- **Status:** Working as designed
+- **Documentation:** `docs/features/DUPLICATE_DETECTION_EXPLAINED.md`
 
 ---
 
