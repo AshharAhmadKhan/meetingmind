@@ -7,6 +7,7 @@ import time
 import urllib.request
 from datetime import datetime, timezone, timedelta
 from decimal import Decimal
+from difflib import SequenceMatcher
 
 # X-Ray instrumentation
 from aws_xray_sdk.core import xray_recorder
@@ -15,6 +16,7 @@ patch_all()  # Auto-instrument boto3, requests, etc.
 
 REGION     = os.environ.get('REGION', 'ap-south-1')
 TABLE_NAME = os.environ.get('MEETINGS_TABLE', 'meetingmind-meetings')
+TEAMS_TABLE = os.environ.get('TEAMS_TABLE', 'meetingmind-teams')
 FRONTEND_URL = os.environ.get('FRONTEND_URL', 'https://dcfx593ywvy92.cloudfront.net')
 SES_FROM_EMAIL = os.environ.get('SES_FROM_EMAIL', 'thecyberprinciples@gmail.com')
 
@@ -31,6 +33,82 @@ dynamodb   = boto3.resource('dynamodb', region_name=REGION)
 bedrock    = boto3.client('bedrock-runtime', region_name=REGION, config=bedrock_config)
 transcribe = boto3.client('transcribe', region_name=REGION)
 ses        = boto3.client('ses', region_name=REGION)
+
+def _get_team_members(team_id):
+    """Fetch team members' names from the teams table."""
+    if not team_id:
+        return []
+    
+    try:
+        teams_table = dynamodb.Table(TEAMS_TABLE)
+        response = teams_table.get_item(Key={'teamId': team_id})
+        team = response.get('Item')
+        
+        if not team:
+            return []
+        
+        members = team.get('members', [])
+        # Extract names from members list
+        member_names = [m.get('name', '') for m in members if m.get('name')]
+        print(f"Team {team_id} members: {member_names}")
+        return member_names
+    except Exception as e:
+        print(f"Error fetching team members: {e}")
+        return []
+
+def _fuzzy_match_owner(ai_owner, team_members, threshold=0.6):
+    """
+    Match AI-extracted owner name to team member names using fuzzy matching.
+    
+    Args:
+        ai_owner: Name extracted by AI (e.g., "Zeeshan", "Abdul")
+        team_members: List of team member names (e.g., ["Abdul Zeeshan", "Ashhar Ahmad Khan"])
+        threshold: Minimum similarity ratio (0.0 to 1.0)
+    
+    Returns:
+        Best matching team member name or original ai_owner if no good match
+    """
+    if not ai_owner or ai_owner == 'Unassigned' or not team_members:
+        return ai_owner
+    
+    ai_owner_lower = ai_owner.lower().strip()
+    best_match = None
+    best_ratio = 0.0
+    
+    for member_name in team_members:
+        member_lower = member_name.lower().strip()
+        
+        # Check for exact match first
+        if ai_owner_lower == member_lower:
+            return member_name
+        
+        # Check if AI name is a word in member name (e.g., "Zeeshan" in "Abdul Zeeshan")
+        member_words = member_lower.split()
+        if ai_owner_lower in member_words:
+            print(f"Fuzzy matched '{ai_owner}' → '{member_name}' (word match)")
+            return member_name
+        
+        # Check if AI name is a substring of any word in member name
+        for word in member_words:
+            if ai_owner_lower in word or word in ai_owner_lower:
+                ratio = SequenceMatcher(None, ai_owner_lower, word).ratio()
+                if ratio > best_ratio:
+                    best_ratio = ratio
+                    best_match = member_name
+        
+        # Also check overall similarity
+        overall_ratio = SequenceMatcher(None, ai_owner_lower, member_lower).ratio()
+        if overall_ratio > best_ratio:
+            best_ratio = overall_ratio
+            best_match = member_name
+    
+    # Return best match if above threshold
+    if best_match and best_ratio >= threshold:
+        print(f"Fuzzy matched '{ai_owner}' → '{best_match}' (ratio: {best_ratio:.2f})")
+        return best_match
+    
+    # No good match found
+    return ai_owner
 
 def _update(table, user_id, meeting_id, status, extra=None):
     # Check if meeting exists to determine if it's new
@@ -675,15 +753,23 @@ def lambda_handler(event, context):
                 )
                 raise Exception(error_msg)
 
+        # Get team members for fuzzy name matching
+        team_id = item.get('teamId')
+        team_members = _get_team_members(team_id) if team_id else []
+        
         # Normalize action items with risk scores and embeddings
         action_items = []
         created_at = datetime.now(timezone.utc)
         
         for i, a in enumerate(analysis.get('action_items', [])):
+            # Apply fuzzy matching to owner name
+            ai_owner = a.get('owner', 'Unassigned')
+            matched_owner = _fuzzy_match_owner(ai_owner, team_members) if team_members else ai_owner
+            
             action = {
                 'id':        a.get('id', f'action-{i+1}'),
                 'task':      a.get('task', ''),
-                'owner':     a.get('owner', 'Unassigned'),
+                'owner':     matched_owner,
                 'deadline':  a.get('deadline') if a.get('deadline') not in (None,'null','None','') else None,
                 'completed': False,
                 'status':    'todo',  # Initialize with todo status

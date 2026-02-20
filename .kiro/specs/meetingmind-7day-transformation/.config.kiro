@@ -1,0 +1,9 @@
+{
+  "specType": "feature",
+  "workflowType": "requirements-first",
+  "featureName": "meetingmind-7day-transformation",
+  "status": "completed",
+  "createdAt": "2026-02-14T00:00:00Z",
+  "completedAt": "2026-02-21T00:00:00Z",
+  "version": "1.0.0"
+}

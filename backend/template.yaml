@@ -202,6 +202,8 @@ Resources:
             BucketName: !Ref AudioBucket
         - DynamoDBCrudPolicy:
             TableName: !Ref MeetingsTable
+        - DynamoDBReadPolicy:
+            TableName: !Ref TeamsTable
         - SQSPollerPolicy:
             QueueName: !GetAtt ProcessingQueue.QueueName
         - Statement:
