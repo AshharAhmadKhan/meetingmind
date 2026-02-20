@@ -290,9 +290,10 @@ View traces in AWS X-Ray console to debug performance issues.
 ## Support
 
 For issues or questions:
+- **Developer:** Ashhar Ahmad Khan
+- **Email:** thecyberprinciples@gmail.com
 - Check [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
 - Review [AI_AGENT_HANDBOOK.md](../AI_AGENT_HANDBOOK.md)
-- Email: thecyberprinciples@gmail.com
 
 ---
 

@@ -176,5 +176,5 @@ When adding or updating documentation:
 
 ---
 
-**Last Updated:** February 20, 2026 - 7:25 PM IST  
-**Maintained by:** MeetingMind Team
+**Last Updated:** February 20, 2026 - 7:45 PM IST  
+**Maintained by:** Ashhar Ahmad Khan

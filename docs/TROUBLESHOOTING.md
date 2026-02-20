@@ -351,7 +351,7 @@ If you're still stuck:
 1. Check [AI_AGENT_HANDBOOK.md](../AI_AGENT_HANDBOOK.md) for AI-specific guidance
 2. Review [ARCHITECTURE.md](ARCHITECTURE.md) for system design
 3. Check [DEPLOYMENT.md](DEPLOYMENT.md) for deployment steps
-4. Email: thecyberprinciples@gmail.com
+4. **Contact:** Ashhar Ahmad Khan - thecyberprinciples@gmail.com
 
 ---
 

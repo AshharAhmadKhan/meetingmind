@@ -185,6 +185,7 @@ This is a competition entry, but feedback is welcome!
 
 ## 📞 Contact
 
+**Developer & Maintainer:** Ashhar Ahmad Khan  
 **Email:** thecyberprinciples@gmail.com  
 **AWS Account:** 707411439284  
 **Region:** ap-south-1 (Mumbai)
