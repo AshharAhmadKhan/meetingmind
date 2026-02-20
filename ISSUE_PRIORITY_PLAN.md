@@ -164,18 +164,18 @@ These issues cannot be fixed with current data because all V2 meetings have unas
 4. ✅ Issue #5 - Meeting details navigation (DONE)
 5. ✅ Issue #19 - Leaderboard aggregation (DONE)
 
-### Phase 2: High-Impact Fixes (2-3 hours total)
+### Phase 2: High-Impact Fixes (2-3 hours total) - COMPLETE
 6. ✅ Issue #18 - Kanban drag-and-drop (DONE - Team member access fixed)
-7. Issue #21 - Debt dashboard real data (45 min)
+7. ✅ Issue #6 - Resurrect function (DONE - Team member access fixed)
+8. ✅ Issue #20 - Graveyard datetime errors (DONE - Epitaph generation fixed)
 
-### Phase 3: Backend Fixes (2-3 hours total)
-8. ✅ Issue #6 - Resurrect function (DONE - Team member access fixed)
-9. Issue #14 - Health score formula (45 min)
-10. Issue #15 - ROI calculation (45 min)
+### Phase 3: Backend Fixes (Next - 2-3 hours total)
+9. Issue #21 - Debt dashboard real data (45 min)
+10. Issue #14 - Health score formula (45 min)
+11. Issue #15 - ROI calculation (45 min)
 
 ### Phase 4: Polish (1 hour total)
-11. Issue #2 - View invite code (30 min)
-12. ✅ Issue #20 - Graveyard cleanup (DONE - Datetime errors fixed)
+12. Issue #2 - View invite code (30 min)
 
 **Total Estimated Time:** 6-9 hours for all Category A fixes
 
@@ -211,15 +211,9 @@ Then we'll tackle Category B (requires new audio):
 
 ## Current Status
 
-- ✅ Issue #22 - Team visibility FIXED
-- ✅ Issue #1 - Empty state FIXED
-- ✅ Issue #16 - Charts restored with conditional logic FIXED
-- ✅ Issue #5 - Meeting details navigation FIXED
-- ✅ Issue #19 - Leaderboard + Task Distribution filtering FIXED
-- ✅ Issue #18 - Kanban drag-and-drop FIXED (Team member access)
-- ✅ Issue #6 - Resurrect function FIXED (Team member access)
-- ✅ Issue #20 - Graveyard datetime errors FIXED
-- ⏳ Phase 1 & 2 Complete! Ready for Phase 3
+- ✅ Phase 1 Quick Wins: COMPLETE (5 issues)
+- ✅ Phase 2 High-Impact Fixes: COMPLETE (3 issues)
+- ⏳ Phase 3 Backend Fixes: IN PROGRESS
 - 📋 4 issues in Category A remaining
 - 🎤 6 issues in Category B (blocked on audio)
 - 📝 4 issues in Category C (documentation)

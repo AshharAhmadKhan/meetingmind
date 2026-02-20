@@ -21,6 +21,8 @@
 
 ---
 
+---
+
 ## REMAINING ISSUES - Category A (Can Fix with Existing Data)
 
 ### Issue #2: Cannot See Team Invite Code After Creation
