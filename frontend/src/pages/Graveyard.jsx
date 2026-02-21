@@ -79,8 +79,13 @@ export default function Graveyard() {
     setResurrecting(true)
     
     try {
-      // For now, just mark as complete (resurrection logic can be enhanced)
-      await updateAction(resurrectModal.meetingId, resurrectModal.id, true)
+      // Resurrect: move to 'todo' status with new owner and deadline
+      await updateAction(resurrectModal.meetingId, resurrectModal.id, {
+        status: 'todo',
+        owner: newOwner,
+        deadline: newDeadline,
+        completed: false
+      })
       
       // Remove from graveyard
       setBuried(buried.filter(a => a.id !== resurrectModal.id))
@@ -259,8 +264,8 @@ export default function Graveyard() {
               </div>
               
               <p style={s.modalHint}>
-                This will mark the item as complete and remove it from the graveyard.
-                You can create a new action item with the updated details.
+                This will move the item back to "To Do" status with the updated owner and deadline.
+                The item will appear in your Kanban board.
               </p>
             </div>
             

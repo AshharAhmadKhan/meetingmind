@@ -45,6 +45,8 @@ def lambda_handler(event, context):
     
     completed  = body.get('completed', False)
     status     = body.get('status')  # New: support status field
+    owner      = body.get('owner')   # New: support owner update
+    deadline   = body.get('deadline')  # New: support deadline update
 
     table    = dynamodb.Table(TABLE_NAME)
     
@@ -116,6 +118,14 @@ def lambda_handler(event, context):
                         # If moving away from done, mark as incomplete
                         action['completed'] = False
                         action['completedAt'] = None
+            
+            # Update owner if provided
+            if owner is not None:
+                action['owner'] = owner
+            
+            # Update deadline if provided
+            if deadline is not None:
+                action['deadline'] = deadline
             
             updated = True
             break
