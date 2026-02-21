@@ -3,6 +3,9 @@ import boto3
 import os
 from datetime import datetime, timezone, timedelta
 from decimal import Decimal
+import sys
+sys.path.append('/opt/python')  # Lambda layer path
+from constants import AVG_HOURLY_RATE, AVG_BLOCKED_TIME_HOURS, INDUSTRY_COMPLETION_RATE
 
 dynamodb = boto3.resource('dynamodb')
 TABLE_NAME = os.environ['MEETINGS_TABLE']
@@ -13,10 +16,6 @@ CORS_HEADERS = {
     'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
     'Content-Type': 'application/json'
 }
-
-# Constants based on research
-AVG_HOURLY_RATE = 75  # $75/hour average developer salary
-AVG_BLOCKED_TIME_HOURS = 3.2  # Research-backed: time blocked per incomplete action
 
 
 def lambda_handler(event, context):
@@ -183,9 +182,6 @@ def calculate_debt_analytics(meetings):
     # Generate trend data (last 8 weeks)
     trend = generate_trend_data(weekly_debt, now)
     
-    # Industry benchmark (research-backed: 67% average completion rate)
-    industry_benchmark = 0.67
-    
     return {
         'totalDebt': round(total_debt, 2),
         'breakdown': {
@@ -196,7 +192,7 @@ def calculate_debt_analytics(meetings):
         },
         'trend': trend,
         'completionRate': round(completion_rate, 2),
-        'industryBenchmark': industry_benchmark,
+        'industryBenchmark': INDUSTRY_COMPLETION_RATE,
         'totalActions': total_actions,
         'completedActions': completed_actions,
         'incompleteActions': incomplete_actions,

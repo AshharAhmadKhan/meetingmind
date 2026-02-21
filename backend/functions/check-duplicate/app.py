@@ -4,6 +4,9 @@ from botocore.config import Config
 import os
 import hashlib
 from decimal import Decimal
+import sys
+sys.path.append('/opt/python')  # Lambda layer path
+from constants import DUPLICATE_SIMILARITY_THRESHOLD
 
 REGION = os.environ.get('REGION', 'ap-south-1')
 TABLE_NAME = os.environ.get('MEETINGS_TABLE', 'meetingmind-meetings')
@@ -99,7 +102,7 @@ def cosine_similarity(vec1, vec2):
     
     return dot_product / (magnitude1 * magnitude2)
 
-def find_duplicates(user_id, new_task, threshold=0.85):
+def find_duplicates(user_id, new_task, threshold=DUPLICATE_SIMILARITY_THRESHOLD):
     """
     Find duplicate action items across all user's meetings.
     Returns list of similar actions with similarity scores.

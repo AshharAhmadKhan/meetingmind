@@ -1,0 +1,41 @@
+refactor: Extract magic numbers to shared constants (Fix #1)
+
+Part of demo-critical fixes for AWS Builder Center competition (top 1000 → top 100)
+
+CHANGES:
+- Created shared constants Lambda layer with 16 extracted constants
+- Updated 4 Lambda functions to use constants instead of magic numbers
+- All values remain identical (pure refactoring, zero logic changes)
+
+CONSTANTS EXTRACTED:
+• ROI Calculation: AVG_ATTENDEES, AVG_HOURLY_RATE, DECISION_VALUE, ACTION_VALUE
+• Debt Analytics: AVG_BLOCKED_TIME_HOURS, INDUSTRY_COMPLETION_RATE
+• Graveyard: GRAVEYARD_THRESHOLD_DAYS, EPITAPH_TTL_DAYS, EPITAPH_TASK_TRUNCATION
+• Duplicate Detection: DUPLICATE_SIMILARITY_THRESHOLD, FUZZY_MATCH_THRESHOLD
+• Transcription: TRANSCRIBE_MAX_RETRIES, TRANSCRIBE_RETRY_DELAY_SECONDS, 
+  TRANSCRIPT_TRUNCATION_LENGTH, BEDROCK_PROMPT_TRUNCATION_LENGTH
+
+UPDATED FUNCTIONS:
+- backend/functions/process-meeting/app.py (9 constants)
+- backend/functions/get-debt-analytics/app.py (3 constants)
+- backend/functions/get-all-actions/app.py (3 constants)
+- backend/functions/check-duplicate/app.py (1 constant)
+
+NEW FILES:
+- backend/layers/shared-constants/python/constants.py (Lambda layer)
+- scripts/testing/test-constants-refactor.py (verification test)
+- scripts/deploy-fix1-constants.ps1 (deployment script)
+
+TESTING:
+✅ All constants verified with test script
+✅ Values match original hardcoded numbers exactly
+✅ Zero functional changes
+
+IMPACT:
+• Makes codebase look professional for judge code review
+• Improves maintainability (single source of truth)
+• Easier to tune values in future
+
+RISK: VERY LOW (pure refactoring, backward compatible)
+
+Related: DEMO_FIXES_PLAN.md

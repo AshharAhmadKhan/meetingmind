@@ -5,6 +5,9 @@ import time
 from datetime import datetime, timezone, timedelta
 from decimal import Decimal
 from botocore.config import Config
+import sys
+sys.path.append('/opt/python')  # Lambda layer path
+from constants import GRAVEYARD_THRESHOLD_DAYS, EPITAPH_TTL_DAYS, EPITAPH_TASK_TRUNCATION
 
 dynamodb = boto3.resource('dynamodb')
 TABLE_NAME = os.environ['MEETINGS_TABLE']
@@ -43,7 +46,7 @@ def generate_epitaph(action, days_old):
     owner = action.get('owner', 'nobody')
     
     # Truncate task if too long
-    task_short = task[:80] + '...' if len(task) > 80 else task
+    task_short = task[:EPITAPH_TASK_TRUNCATION] + '...' if len(task) > EPITAPH_TASK_TRUNCATION else task
     
     prompt = f"""Generate a dramatic, darkly humorous tombstone epitaph for this abandoned task.
 Max 15 words. Be creative and slightly sarcastic.
@@ -244,10 +247,9 @@ def lambda_handler(event, context):
             -x.get('riskScore', 0)  # Higher risk first
         ))
         
-        # Generate epitaphs for graveyard items (>30 days old, incomplete)
-        # Only generate if epitaph is missing or stale (>7 days old)
+        # Generate epitaphs for graveyard items (>GRAVEYARD_THRESHOLD_DAYS days old, incomplete)
+        # Only generate if epitaph is missing or stale (>EPITAPH_TTL_DAYS days old)
         now = datetime.now(timezone.utc)
-        epitaph_ttl_days = 7
         
         for action in all_actions:
             if action['completed']:
@@ -271,8 +273,8 @@ def lambda_handler(event, context):
                 
                 days_old = (now - created_dt).days
                 
-                # Only generate for graveyard items (>30 days)
-                if days_old <= 30:
+                # Only generate for graveyard items
+                if days_old <= GRAVEYARD_THRESHOLD_DAYS:
                     continue
                 
                 # Check if epitaph needs generation
@@ -284,7 +286,7 @@ def lambda_handler(event, context):
                     try:
                         gen_dt = datetime.fromisoformat(action['epitaphGeneratedAt'].replace('Z', '+00:00'))
                         days_since_gen = (now - gen_dt).days
-                        if days_since_gen > epitaph_ttl_days:
+                        if days_since_gen > EPITAPH_TTL_DAYS:
                             needs_epitaph = True
                     except:
                         needs_epitaph = True

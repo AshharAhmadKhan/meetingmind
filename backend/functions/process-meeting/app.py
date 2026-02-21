@@ -9,6 +9,13 @@ import uuid
 from datetime import datetime, timezone, timedelta
 from decimal import Decimal
 from difflib import SequenceMatcher
+import sys
+sys.path.append('/opt/python')  # Lambda layer path
+from constants import (
+    AVG_ATTENDEES, AVG_HOURLY_RATE, DECISION_VALUE, ACTION_VALUE,
+    FUZZY_MATCH_THRESHOLD, TRANSCRIBE_MAX_RETRIES, TRANSCRIBE_RETRY_DELAY_SECONDS,
+    TRANSCRIPT_TRUNCATION_LENGTH, BEDROCK_PROMPT_TRUNCATION_LENGTH
+)
 
 # X-Ray instrumentation
 from aws_xray_sdk.core import xray_recorder
@@ -57,7 +64,7 @@ def _get_team_members(team_id):
         print(f"Error fetching team members: {e}")
         return []
 
-def _fuzzy_match_owner(ai_owner, team_members, threshold=0.6):
+def _fuzzy_match_owner(ai_owner, team_members, threshold=FUZZY_MATCH_THRESHOLD):
     """
     Match AI-extracted owner name to team member names using fuzzy matching.
     
@@ -258,19 +265,13 @@ def _calculate_meeting_roi(actions, decisions, meeting_duration_minutes=30):
     ROI = (value - cost) / cost × 100
     """
     try:
-        # Assumptions for MVP
-        avg_attendees = 4  # Typical meeting size
-        hourly_rate = 75   # Average knowledge worker rate
-        decision_value = 500  # Value of each decision made
-        action_value = 200    # Value of each clear action item
-        
         # Calculate cost
-        cost = avg_attendees * (meeting_duration_minutes / 60) * hourly_rate
+        cost = AVG_ATTENDEES * (meeting_duration_minutes / 60) * AVG_HOURLY_RATE
         
         # Calculate value
         decision_count = len(decisions) if decisions else 0
         clear_actions = len([a for a in actions if a.get('owner') and a.get('owner') != 'Unassigned' and a.get('deadline')]) if actions else 0
-        value = (decision_count * decision_value) + (clear_actions * action_value)
+        value = (decision_count * DECISION_VALUE) + (clear_actions * ACTION_VALUE)
         
         # Calculate ROI
         if cost == 0:
@@ -543,7 +544,7 @@ def _try_bedrock(transcript_text, title):
 
 Meeting: {title}
 Date: {today}
-Transcript: {transcript_text[:6000]}
+Transcript: {transcript_text[:BEDROCK_PROMPT_TRUNCATION_LENGTH]}
 
 Return ONLY JSON."""
 
@@ -652,8 +653,8 @@ def lambda_handler(event, context):
                     MediaFormat=fmt, LanguageCode='en-US',
                     Settings={'ShowSpeakerLabels':True,'MaxSpeakerLabels':5}
                 )
-                for _ in range(48):
-                    time.sleep(15)
+                for _ in range(TRANSCRIBE_MAX_RETRIES):
+                    time.sleep(TRANSCRIBE_RETRY_DELAY_SECONDS)
                     job = transcribe.get_transcription_job(TranscriptionJobName=job_name)
                     status = job['TranscriptionJob']['TranscriptionJobStatus']
                     print(f"Transcribe: {status}")
@@ -686,7 +687,7 @@ def lambda_handler(event, context):
         # ANALYZING phase
         _update(table, user_id, meeting_id, 'ANALYZING',
             {'title':title,'email':email,'s3Key':s3_key,
-             'transcript': transcript_text[:5000]})
+             'transcript': transcript_text[:TRANSCRIPT_TRUNCATION_LENGTH]})
 
         # Try Bedrock with multi-model fallback
         with xray_recorder.capture('bedrock_analysis'):
@@ -695,7 +696,7 @@ def lambda_handler(event, context):
             if not analysis:
                 error_msg = "AI analysis failed - all Bedrock models unavailable. Please try again later."
                 print(f"❌ BEDROCK ANALYSIS FAILED: {error_msg}")
-                _update(table, user_id, meeting_id, 'FAILED', {'errorMessage': error_msg, 'transcript': transcript_text[:5000]})
+                _update(table, user_id, meeting_id, 'FAILED', {'errorMessage': error_msg, 'transcript': transcript_text[:TRANSCRIPT_TRUNCATION_LENGTH]})
                 _send_email_notification(
                     email=email,
                     meeting_id=meeting_id,
@@ -765,7 +766,7 @@ def lambda_handler(event, context):
             'title':       title,
             'email':       email,
             's3Key':       s3_key,
-            'transcript':  transcript_text[:5000],
+            'transcript':  transcript_text[:TRANSCRIPT_TRUNCATION_LENGTH],
             'summary':     analysis.get('summary',''),
             'decisions':   analysis.get('decisions',[]),
             'actionItems': action_items,

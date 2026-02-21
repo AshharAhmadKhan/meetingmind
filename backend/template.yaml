@@ -8,6 +8,8 @@ Globals:
     MemorySize: 256
     Runtime: python3.11
     Tracing: Active  # Enable X-Ray tracing for all Lambda functions
+    Layers:
+      - !Ref SharedConstantsLayer
     Environment:
       Variables:
         MEETINGS_TABLE: !Ref MeetingsTable
@@ -19,6 +21,17 @@ Globals:
         SES_FROM_EMAIL: itzashhar@gmail.com
 
 Resources:
+
+  # ── LAMBDA LAYER: SHARED CONSTANTS ────────────────────────
+  SharedConstantsLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: meetingmind-shared-constants
+      Description: Shared constants for all Lambda functions
+      ContentUri: layers/shared-constants/
+      CompatibleRuntimes:
+        - python3.11
+      RetentionPolicy: Retain
 
   # ── COGNITO ────────────────────────────────────────────────
   MeetingMindUserPool:
