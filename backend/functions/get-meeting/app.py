@@ -18,7 +18,8 @@ def decimal_to_float(obj):
     """Convert Decimal to float for JSON serialization"""
     if isinstance(obj, Decimal):
         return float(obj)
-    raise TypeError
+    # Return unchanged for non-Decimal objects (let JSON encoder handle it)
+    return obj
 
 
 class DecimalEncoder(json.JSONEncoder):

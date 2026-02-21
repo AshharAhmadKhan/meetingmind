@@ -14,6 +14,11 @@ from datetime import datetime, timezone
 def load_lambda(func_folder_name, module_alias):
     """Load a Lambda app.py by file path, give it a unique module name."""
     base = os.path.dirname(__file__)
+    # Add backend directory to path for imports like 'from constants import'
+    backend_dir = os.path.normpath(os.path.join(base, '..'))
+    if backend_dir not in sys.path:
+        sys.path.insert(0, backend_dir)
+    
     path = os.path.normpath(os.path.join(base, f'../functions/{func_folder_name}/app.py'))
     spec = importlib.util.spec_from_file_location(module_alias, path)
     mod  = importlib.util.module_from_spec(spec)
@@ -222,6 +227,7 @@ class TestGetMeeting(unittest.TestCase):
 
         mock_table = MagicMock()
         mock_table.get_item.return_value = {}   # No 'Item' key
+        mock_table.scan.return_value = {'Items': []}  # No items in scan either
         mock_db = MagicMock()
         mock_db.Table.return_value = mock_table
 
