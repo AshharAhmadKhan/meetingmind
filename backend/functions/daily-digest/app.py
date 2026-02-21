@@ -271,7 +271,7 @@ def send_digest_email(to_email, digest_data):
     
     # Send email
     ses.send_email(
-        Source=SES_FROM_EMAIL,
+        Source=f'MeetingMind <{SES_FROM_EMAIL}>',
         Destination={'ToAddresses': [to_email]},
         Message={
             'Subject': {'Data': subject},

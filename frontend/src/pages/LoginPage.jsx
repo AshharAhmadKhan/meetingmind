@@ -59,6 +59,8 @@ export default function LoginPage() {
         }
         .submit-btn:hover:not(:disabled){background:#d4f55a !important;}
         .submit-btn:disabled{opacity:0.5;cursor:not-allowed;}
+        .demo-btn:hover:not(:disabled){background:#d4f55a !important; color:#0c0c09 !important;}
+        .demo-btn:disabled{opacity:0.5;cursor:not-allowed;}
       `}</style>
 
       <div style={s.left}>
@@ -197,6 +199,37 @@ export default function LoginPage() {
               className="submit-btn" style={s.btn}>
               {loading ? (isSignup ? 'Creating account…' : 'Signing in…') : (isSignup ? 'Create account →' : 'Sign in →')}
             </button>
+
+            {!isSignup && (
+              <>
+                <div style={s.divider}>
+                  <span style={s.dividerLine}/>
+                  <span style={s.dividerText}>or</span>
+                  <span style={s.dividerLine}/>
+                </div>
+
+                <button 
+                  type="button"
+                  onClick={() => {
+                    setEmail('demo@meetingmind.com');
+                    setPassword('TryMeetingMind2026');
+                    setTimeout(() => {
+                      const form = document.querySelector('form');
+                      if (form) form.requestSubmit();
+                    }, 100);
+                  }}
+                  disabled={loading}
+                  style={s.demoBtn}
+                  className="demo-btn"
+                >
+                  Try Demo →
+                </button>
+
+                <p style={s.demoNote}>
+                  We review every account personally — usually within 24 hours
+                </p>
+              </>
+            )}
           </form>
 
           {!signupSuccess && (
@@ -303,4 +336,14 @@ const s = {
             display:'flex', flexDirection:'column', gap:10},
   trustRow:{display:'flex', alignItems:'flex-start', gap:10, fontSize:12},
   trustText:{fontSize:10, color:'#6b7260', letterSpacing:'0.05em', lineHeight:1.5},
+  divider: {display:'flex', alignItems:'center', gap:12, margin:'8px 0'},
+  dividerLine:{flex:1, height:1, background:'#2a2a20'},
+  dividerText:{fontSize:10, color:'#6b7260', letterSpacing:'0.1em', textTransform:'uppercase'},
+  demoBtn: {background:'#c8f04a', border:'none', borderRadius:4,
+            padding:'14px 20px', color:'#0c0c09', fontSize:12,
+            fontFamily:"'DM Mono',monospace", letterSpacing:'0.1em',
+            textTransform:'uppercase', cursor:'pointer',
+            transition:'background 0.2s, color 0.2s', width:'100%'},
+  demoNote:{fontSize:10, color:'#6b7260', textAlign:'center', marginTop:12,
+            letterSpacing:'0.03em', lineHeight:1.5},
 }

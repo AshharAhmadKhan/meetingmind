@@ -119,7 +119,7 @@ def send_admin_notification(user_email):
     """
     
     ses.send_email(
-        Source=SES_FROM_EMAIL,
+        Source=f'MeetingMind <{SES_FROM_EMAIL}>',
         Destination={'ToAddresses': [ADMIN_EMAIL]},
         Message={
             'Subject': {'Data': subject},

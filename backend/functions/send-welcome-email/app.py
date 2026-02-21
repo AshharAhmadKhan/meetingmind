@@ -319,7 +319,7 @@ def lambda_handler(event, context):
     
     try:
         ses.send_email(
-            Source=SES_FROM_EMAIL,
+            Source=f'MeetingMind <{SES_FROM_EMAIL}>',
             Destination={'ToAddresses': [email]},
             Message={
                 'Subject': {'Data': subject},
