@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { logout, checkSession, getUser } from '../utils/auth.js'
 import { getAllActions, updateAction } from '../utils/api.js'
 import TeamSelector from '../components/TeamSelector.jsx'
+import { EpitaphCardSkeleton } from '../components/SkeletonLoader.jsx'
 
 function getDaysOld(createdAt) {
   if (!createdAt) return 0
@@ -212,8 +213,11 @@ export default function Graveyard() {
         {error && <div style={s.errBox}>{error}</div>}
 
         {loading ? (
-          <div style={s.center}>
-            <div style={{...s.spin, animation:'spin 1s linear infinite'}}/>
+          <div style={s.cemetery}>
+            <EpitaphCardSkeleton />
+            <EpitaphCardSkeleton />
+            <EpitaphCardSkeleton />
+            <EpitaphCardSkeleton />
           </div>
         ) : buried.length === 0 ? (
           <div style={s.empty}>

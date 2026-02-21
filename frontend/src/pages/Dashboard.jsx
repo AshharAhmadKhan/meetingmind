@@ -5,6 +5,7 @@ import { listMeetings, getUploadUrl, uploadAudioToS3 } from '../utils/api.js'
 import Leaderboard from '../components/Leaderboard.jsx'
 import PatternCards from '../components/PatternCards.jsx'
 import TeamSelector from '../components/TeamSelector.jsx'
+import { MeetingCardSkeleton } from '../components/SkeletonLoader.jsx'
 
 const STATUS = {
   PENDING:      { label: 'Pending',      color: '#8a8a74' },
@@ -251,8 +252,10 @@ export default function Dashboard() {
           {error && <div style={s.errBox}>{error}</div>}
 
           {loading ? (
-            <div style={s.center}>
-              <div style={{...s.spin, animation:'spin 1s linear infinite'}}/>
+            <div style={{display:'flex', flexDirection:'column', gap:8}}>
+              <MeetingCardSkeleton />
+              <MeetingCardSkeleton />
+              <MeetingCardSkeleton />
             </div>
           ) : meetings.length === 0 ? (
             <EmptyState/>

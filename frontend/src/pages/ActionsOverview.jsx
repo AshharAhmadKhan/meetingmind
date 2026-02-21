@@ -4,6 +4,7 @@ import { logout, checkSession, getUser } from '../utils/auth.js'
 import { getAllActions, checkDuplicate, updateAction } from '../utils/api.js'
 import TeamSelector from '../components/TeamSelector.jsx'
 import KanbanBoard from '../components/KanbanBoard.jsx'
+import { ActionItemSkeleton } from '../components/SkeletonLoader.jsx'
 
 const RISK_COLORS = {
   LOW:      '#c8f04a',
@@ -323,8 +324,28 @@ export default function ActionsOverview() {
         {error && <div style={s.errBox}>{error}</div>}
 
         {loading ? (
-          <div style={s.center}>
-            <div style={{...s.spin, animation:'spin 1s linear infinite'}}/>
+          <div style={s.meetingsList}>
+            <div style={s.meetingCard}>
+              <div style={s.meetingHeader}>
+                <div style={{...s.skeletonBar, width:'40%', height:16}}/>
+                <div style={{...s.skeletonBar, width:120, height:28}}/>
+              </div>
+              <div style={s.actionsList}>
+                <ActionItemSkeleton />
+                <ActionItemSkeleton />
+                <ActionItemSkeleton />
+              </div>
+            </div>
+            <div style={s.meetingCard}>
+              <div style={s.meetingHeader}>
+                <div style={{...s.skeletonBar, width:'35%', height:16}}/>
+                <div style={{...s.skeletonBar, width:120, height:28}}/>
+              </div>
+              <div style={s.actionsList}>
+                <ActionItemSkeleton />
+                <ActionItemSkeleton />
+              </div>
+            </div>
           </div>
         ) : filteredActions.length === 0 ? (
           <div style={s.empty}>
@@ -425,6 +446,7 @@ const css = `
   body{background:#0c0c09;}
   @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
   @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes shimmer{0%,100%{opacity:0.4}50%{opacity:0.7}}
   .signout:hover{color:#f0ece0 !important;border-color:#6b7260 !important;}
   .navBtn:hover{color:#f0ece0 !important;border-color:#6b7260 !important;}
   .meetingcard{animation:fadeUp 0.35s ease both;}
@@ -548,4 +570,5 @@ const s = {
            transition:'all 0.15s'},
   viewBtnActive:{background:'#c8f04a', color:'#0c0c09', borderColor:'#c8f04a'},
   viewBtnInactive:{background:'#1e1e16', color:'#8a8a74', borderColor:'#3a3a2e'},
+  skeletonBar:{background:'#2a2a24', borderRadius:3, animation:'shimmer 1.5s ease-in-out infinite'},
 }
