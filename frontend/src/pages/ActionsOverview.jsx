@@ -52,7 +52,11 @@ export default function ActionsOverview() {
 
   async function fetchActions() {
     try {
-      const data = await getAllActions(null, null, selectedTeamId)
+      // Add minimum loading time for better UX (skeleton visibility)
+      const [data] = await Promise.all([
+        getAllActions(null, null, selectedTeamId),
+        new Promise(resolve => setTimeout(resolve, 2000))
+      ])
       setActions(data.actions || [])
       setStats(data.stats || {})
     } catch (e) {

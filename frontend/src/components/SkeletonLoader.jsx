@@ -1,10 +1,11 @@
 import React from 'react'
 
-// Reusable skeleton components for loading states
+// Reusable skeleton components with SUBTLE WHITE SHIMMER (minimal & elegant)
 
 export function MeetingCardSkeleton() {
   return (
     <div style={s.card}>
+      <div style={s.shimmerWave}/>
       <div style={s.top}>
         <div style={{...s.bar, width:'60%'}}/>
         <div style={{...s.circle}}/>
@@ -22,6 +23,7 @@ export function MeetingCardSkeleton() {
 export function ActionItemSkeleton() {
   return (
     <div style={s.actionCard}>
+      <div style={s.shimmerWave}/>
       <div style={s.actionTop}>
         <div style={s.actionLeft}>
           <div style={s.checkbox}/>
@@ -42,6 +44,7 @@ export function ActionItemSkeleton() {
 export function EpitaphCardSkeleton() {
   return (
     <div style={s.tombstone}>
+      <div style={s.shimmerWave}/>
       <div style={s.tombTop}>
         <div style={s.tombIcon}/>
         <div style={{...s.bar, width:60, height:12}}/>
@@ -72,61 +75,82 @@ export function StatsCardSkeleton() {
 
 const s = {
   card: {
-    background:'#141410', border:'1px solid #2e2e22', borderRadius:6,
-    padding:'14px 16px', animation:'pulse 1.5s ease-in-out infinite'
+    background:'#1a1a14', 
+    border:'1px solid #3a3a2e', 
+    borderRadius:6,
+    padding:'14px 16px',
+    position:'relative',
+    overflow:'hidden'
   },
-  top: {display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8},
-  bottom: {display:'flex', justifyContent:'space-between', alignItems:'center'},
+  shimmerWave: {
+    position:'absolute',
+    top:0, left:'-100%', right:0, bottom:0,
+    background:'linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent)',
+    animation:'shimmerSlide 2s infinite',
+    zIndex:2,
+    pointerEvents:'none'
+  },
+  top: {display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8, position:'relative', zIndex:1},
+  bottom: {display:'flex', justifyContent:'space-between', alignItems:'center', position:'relative', zIndex:1},
   bar: {
-    height:14, background:'#2a2a24', borderRadius:3,
-    animation:'shimmer 1.5s ease-in-out infinite'
+    height:14, 
+    background:'#3a3a3a',
+    borderRadius:3,
+    position:'relative',
+    zIndex:1
   },
   circle: {
-    width:20, height:20, background:'#2a2a24', borderRadius:'50%',
-    animation:'shimmer 1.5s ease-in-out infinite'
+    width:20, height:20, 
+    background:'#3a3a3a',
+    borderRadius:'50%',
+    position:'relative',
+    zIndex:1
   },
   actionCard: {
-    background:'#141410', border:'1px solid #2e2e22', borderRadius:6,
-    padding:'12px 14px', animation:'pulse 1.5s ease-in-out infinite'
+    background:'#1a1a14', 
+    border:'1px solid #3a3a2e', 
+    borderRadius:6,
+    padding:'12px 14px',
+    position:'relative',
+    overflow:'hidden'
   },
-  actionTop: {display:'flex', justifyContent:'space-between', alignItems:'flex-start'},
+  actionTop: {display:'flex', justifyContent:'space-between', alignItems:'flex-start', position:'relative', zIndex:1},
   actionLeft: {display:'flex', gap:12, flex:1},
   checkbox: {
-    width:16, height:16, background:'#2a2a24', borderRadius:3,
-    animation:'shimmer 1.5s ease-in-out infinite'
+    width:16, height:16, 
+    background:'#3a3a3a',
+    borderRadius:3,
+    position:'relative',
+    zIndex:1
   },
   metaRow: {display:'flex', gap:12},
   badge: {
-    width:50, height:20, background:'#2a2a24', borderRadius:3,
-    animation:'shimmer 1.5s ease-in-out infinite'
+    width:50, height:20, 
+    background:'#3a3a3a',
+    borderRadius:3,
+    position:'relative',
+    zIndex:1
   },
   tombstone: {
-    background:'#111108', border:'1px solid #2a2a20', borderRadius:8,
-    padding:'20px', animation:'pulse 1.5s ease-in-out infinite'
+    background:'#1a1a14', 
+    border:'1px solid #3a3a2e', 
+    borderRadius:8,
+    padding:'20px',
+    position:'relative',
+    overflow:'hidden'
   },
-  tombTop: {display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16},
+  tombTop: {display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16, position:'relative', zIndex:1},
   tombIcon: {
-    width:32, height:32, background:'#2a2a24', borderRadius:'50%',
-    animation:'shimmer 1.5s ease-in-out infinite'
+    width:32, height:32, 
+    background:'#3a3a3a',
+    borderRadius:'50%',
+    position:'relative',
+    zIndex:1
   },
-  tombBody: {marginBottom:16},
+  tombBody: {marginBottom:16, position:'relative', zIndex:1},
   metaGrid: {
     display:'grid', gridTemplateColumns:'1fr 1fr', gap:8,
     paddingTop:12, borderTop:'1px solid #2a2a20'
   },
   statItem: {display:'flex', flexDirection:'column', alignItems:'center'},
 }
-
-// Add CSS animations
-const style = document.createElement('style')
-style.textContent = `
-  @keyframes shimmer {
-    0%, 100% { opacity: 0.4; }
-    50% { opacity: 0.7; }
-  }
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.8; }
-  }
-`
-document.head.appendChild(style)

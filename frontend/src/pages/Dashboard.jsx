@@ -111,7 +111,11 @@ export default function Dashboard() {
     const currentTeamId = selectedTeamIdRef.current
     
     try { 
-      const data = await listMeetings(currentTeamId)
+      // Add minimum loading time for better UX (skeleton visibility)
+      const [data] = await Promise.all([
+        listMeetings(currentTeamId),
+        new Promise(resolve => setTimeout(resolve, 2000))
+      ])
       setMeetings(data || [])
       setError('')
     }
@@ -450,6 +454,8 @@ const css = `
   @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
   @keyframes spin{to{transform:rotate(360deg)}}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+  @keyframes shimmer{0%,100%{opacity:0.4}50%{opacity:0.7}}
+  @keyframes shimmerSlide{0%{left:-100%}100%{left:100%}}
   @keyframes ghostpulse{0%,100%{opacity:0.6}50%{opacity:1}}
   @keyframes arrowpulse{0%,100%{transform:translateX(0);opacity:1}50%{transform:translateX(4px);opacity:0.6}}
   @keyframes wavebar{from{transform:scaleY(0.4)}to{transform:scaleY(1.4)}}
