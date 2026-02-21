@@ -181,6 +181,22 @@ Resources:
               Access-Control-Allow-Headers: "'Content-Type,Authorization'"
               Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS'"
 
+  # ── API GATEWAY USAGE PLAN (Rate Limiting) ────────────────
+  MeetingMindUsagePlan:
+    Type: AWS::ApiGateway::UsagePlan
+    Properties:
+      UsagePlanName: meetingmind-default-plan
+      Description: Rate limiting to prevent cost spikes and DoS attacks
+      ApiStages:
+        - ApiId: !Ref MeetingMindApi
+          Stage: prod
+      Throttle:
+        BurstLimit: 100    # Max 100 requests in burst (generous for normal use)
+        RateLimit: 50      # 50 requests/second sustained (3,000/min)
+      Quota:
+        Limit: 10000       # 10,000 requests/day per IP (normal user ~500/day)
+        Period: DAY
+
   # ── LAMBDA: GET UPLOAD URL ─────────────────────────────────
   GetUploadUrlFunction:
     Type: AWS::Serverless::Function

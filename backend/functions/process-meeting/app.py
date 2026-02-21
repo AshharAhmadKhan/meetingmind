@@ -5,6 +5,7 @@ import os
 import re
 import time
 import urllib.request
+import uuid
 from datetime import datetime, timezone, timedelta
 from decimal import Decimal
 from difflib import SequenceMatcher
@@ -718,7 +719,7 @@ def lambda_handler(event, context):
             matched_owner = _fuzzy_match_owner(ai_owner, team_members) if team_members else ai_owner
             
             action = {
-                'id':        a.get('id', f'action-{i+1}'),
+                'id':        str(uuid.uuid4()),  # Generate unique UUID for each action
                 'task':      a.get('task', ''),
                 'owner':     matched_owner,
                 'deadline':  a.get('deadline') if a.get('deadline') not in (None,'null','None','') else None,

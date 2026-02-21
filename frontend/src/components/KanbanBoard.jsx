@@ -108,6 +108,17 @@ const ActionCard = React.memo(function ActionCard({ action }) {
     isDragging,
   } = useSortable({ id: action.id });
 
+  // Debug logging
+  React.useEffect(() => {
+    if (isDragging) {
+      console.log('🔥 CARD DRAGGING:', {
+        id: action.id,
+        task: action.task.substring(0, 30),
+        isDragging
+      });
+    }
+  }, [isDragging, action.id, action.task]);
+
   const style = useMemo(() => ({
     transform: CSS.Transform.toString(transform),
     transition,
@@ -233,11 +244,18 @@ const ActionCard = React.memo(function ActionCard({ action }) {
 });
 
 // Main Kanban Board
-export default function KanbanBoard({ actions, onStatusChange }) {
+export default function KanbanBoard({ actions, allActions, onStatusChange }) {
   const [activeId, setActiveId] = useState(null);
+  
+  // Use allActions for lookups to avoid filter-related failures
+  const actionsForLookup = allActions || actions;
 
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // Require 8px movement before drag starts
+      },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
@@ -269,59 +287,108 @@ export default function KanbanBoard({ actions, onStatusChange }) {
       done: { title: 'Done', color: '#c8f04a', actions: [] },
     };
 
+    // Check for duplicate IDs
+    const seenIds = new Set();
+    const duplicates = [];
+
     actions.forEach(action => {
+      if (seenIds.has(action.id)) {
+        duplicates.push(action.id);
+      }
+      seenIds.add(action.id);
+
       const status = getStatus(action);
       if (grouped[status]) {
         grouped[status].actions.push(action);
       }
     });
 
+    if (duplicates.length > 0) {
+      console.error('⚠️ DUPLICATE ACTION IDs DETECTED:', duplicates);
+    }
+
+    console.log('📊 Column distribution:', {
+      todo: grouped.todo.actions.length,
+      in_progress: grouped.in_progress.actions.length,
+      blocked: grouped.blocked.actions.length,
+      done: grouped.done.actions.length,
+      total: actions.length
+    });
+
     return grouped;
   }, [actions, getStatus]);
 
   const handleDragStart = useCallback((event) => {
+    console.log('🎯 DRAG START:', {
+      activeId: event.active.id,
+      activeData: event.active.data,
+      timestamp: new Date().toISOString()
+    });
     setActiveId(event.active.id);
   }, []);
 
   // CRITICAL FIX #3: Support reordering within same column
   const handleDragEnd = useCallback((event) => {
     const { active, over } = event;
+    
+    console.log('🎯 DRAG END:', {
+      activeId: active.id,
+      overId: over?.id,
+      overData: over?.data?.current,
+      timestamp: new Date().toISOString()
+    });
+    
     setActiveId(null);
 
     if (!over || over.id === active.id) {
+      console.log('❌ Drop cancelled: no target or same card');
       return;
     }
 
-    const activeAction = actions.find(a => a.id === active.id);
+    const activeAction = actionsForLookup.find(a => a.id === active.id);
     if (!activeAction) {
+      console.log('❌ Active action not found');
       return;
     }
 
-    // Check if we're reordering within the same column
-    const activeIndex = actions.findIndex(a => a.id === active.id);
-    const overIndex = actions.findIndex(a => a.id === over.id);
-
-    if (activeIndex !== -1 && overIndex !== -1) {
-      const activeStatus = getStatus(activeAction);
-      const overAction = actions.find(a => a.id === over.id);
-      const overStatus = overAction ? getStatus(overAction) : null;
-
-      // Same column reordering
-      if (overStatus && activeStatus === overStatus) {
-        // TODO: Implement onReorder callback for within-column reordering
-        // For now, we skip this as backend doesn't support order field yet
-        return;
+    // Determine target status
+    let targetStatus = null;
+    
+    // Check if dropped on a column (over.data.current.type === 'column')
+    if (over.data?.current?.type === 'column') {
+      targetStatus = over.data.current.status;
+      console.log('✓ Dropped on column:', targetStatus);
+    } else {
+      // Dropped on another card - find which column that card is in
+      const overAction = actionsForLookup.find(a => a.id === over.id);
+      if (overAction) {
+        targetStatus = getStatus(overAction);
+        console.log('✓ Dropped on card, target column:', targetStatus);
+      } else {
+        // Fallback: check if over.id is a valid column ID
+        const validColumns = ['todo', 'in_progress', 'blocked', 'done'];
+        if (validColumns.includes(over.id)) {
+          targetStatus = over.id;
+          console.log('✓ Fallback: over.id is column:', targetStatus);
+        }
       }
     }
 
-    // Moving to different column
-    const targetStatus = over.data?.current?.status || over.id;
-    const currentStatus = getStatus(activeAction);
-
-    if (targetStatus && targetStatus !== currentStatus && columns[targetStatus]) {
-      onStatusChange(activeAction.meetingId, activeAction.id, targetStatus);
+    if (!targetStatus) {
+      console.log('❌ Could not determine target status');
+      return;
     }
-  }, [actions, getStatus, columns, onStatusChange]);
+
+    const currentStatus = getStatus(activeAction);
+    
+    if (targetStatus === currentStatus) {
+      console.log('⏭️ Same column, skipping (no reorder support yet)');
+      return;
+    }
+
+    console.log(`✅ Moving ${activeAction.task.substring(0, 30)} from ${currentStatus} → ${targetStatus}`);
+    onStatusChange(activeAction.meetingId, activeAction.id, targetStatus);
+  }, [actionsForLookup, getStatus, onStatusChange]);
 
   // Memoized container styles
   const containerStyles = useMemo(() => ({

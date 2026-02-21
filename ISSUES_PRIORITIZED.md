@@ -236,17 +236,21 @@ for action in all_actions:
 **Severity:** HIGH  
 **File:** `frontend/src/components/KanbanBoard.jsx`
 
+**Status:** ✅ FIXED (2026-02-21)
+
 **Issue:**
-- Drag-and-drop between columns doesn't work
-- User reported in context transfer
+- When dragging one card, multiple cards (2-3-4) would get "held" together
+- Root cause: Duplicate action IDs across meetings (e.g., "action-1", "action-2")
+- Lambda was using AI-generated IDs instead of unique UUIDs
 
 **Fix:**
-- Implement `onDragEnd` handler
-- Update action status via API
-- Sync with backend
+- Generated unique UUIDs for all action IDs in process-meeting Lambda
+- Migrated 113 existing actions across 27 meetings to use UUIDs
+- Added 8px activation distance to prevent accidental drags
+- Added duplicate ID detection logging
 
-**Effort:** 4-6 hours  
-**Files:** `frontend/src/components/KanbanBoard.jsx`, `frontend/src/pages/ActionsOverview.jsx`
+**Effort:** 4 hours  
+**Files:** `backend/functions/process-meeting/app.py`, `frontend/src/components/KanbanBoard.jsx`, `scripts/fix-duplicate-action-ids.py`
 
 ---
 
@@ -254,6 +258,8 @@ for action in all_actions:
 **Priority: 16** (Ease: 4, Impact: 4)  
 **Severity:** MEDIUM  
 **File:** `frontend/src/pages/Graveyard.jsx`
+
+**Status:** ✅ FIXED (2026-02-21)
 
 **Issue:**
 - No way to bring items back from graveyard
