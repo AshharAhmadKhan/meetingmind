@@ -607,6 +607,30 @@ Resources:
             Schedule: cron(0 3 * * ? *)
             Description: Daily digest at 9AM IST (3AM UTC)
 
+  # ── LAMBDA: GENERATE EPITAPHS (NIGHTLY) ───────────────────
+  GenerateEpitaphsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: meetingmind-generate-epitaphs
+      CodeUri: functions/generate-epitaphs/
+      Handler: app.lambda_handler
+      Timeout: 900  # 15 minutes (may have many epitaphs to generate)
+      MemorySize: 512
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref MeetingsTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - bedrock:InvokeModel
+              Resource: "*"
+      Events:
+        NightlySchedule:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 3 * * ? *)  # 3 AM UTC = 9 AM IST
+            Description: Nightly epitaph generation for graveyard items
+
   # ── LAMBDA: PRE-SIGNUP ─────────────────────────────────────
   PreSignupFunction:
     Type: AWS::Serverless::Function
