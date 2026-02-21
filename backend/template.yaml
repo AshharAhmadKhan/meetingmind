@@ -59,9 +59,12 @@ Resources:
             MaxAge: 3600
       LifecycleConfiguration:
         Rules:
-          - Id: DeleteOldAudio
+          - Id: ArchiveAndDeleteAudio
             Status: Enabled
-            ExpirationInDays: 30
+            Transitions:
+              - TransitionInDays: 7
+                StorageClass: GLACIER_IR  # Instant Retrieval - 68% cheaper, millisecond access
+            ExpirationInDays: 90  # Keep for 90 days total for compliance
 
   # ── DYNAMODB ───────────────────────────────────────────────
   MeetingsTable:
