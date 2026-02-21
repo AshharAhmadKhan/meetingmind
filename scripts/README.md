@@ -1,84 +1,135 @@
-# Scripts
+# MeetingMind Scripts
 
-Utility scripts for testing and maintenance.
+Utility scripts for deployment, testing, and data management.
 
-## Day 5 Scripts
+## 🚀 Deployment Scripts
 
-### `generate-embeddings.py`
-Backfills embeddings for existing action items in DynamoDB.
-
-**Usage:**
+### Quick Deploy
 ```bash
-python scripts/generate-embeddings.py
+# Deploy everything (backend + frontend)
+.\deploy-all.ps1          # Windows
+bash deploy-all.sh        # Linux/Mac
+
+# Deploy backend only
+.\deploy-backend.ps1      # Windows
+bash deploy-backend.sh    # Linux/Mac
+
+# Deploy frontend only
+.\deploy-frontend.ps1     # Windows
+bash deploy-frontend.sh   # Linux/Mac
 ```
 
-**What it does:**
-- Queries all meetings for a user
-- Generates embeddings for action items without embeddings
-- Converts float to Decimal for DynamoDB compatibility
-- Updates meetings in DynamoDB
+## 🧪 Testing Scripts
 
-**Output:**
-- Total actions processed
-- Number of embeddings generated
-- Coverage percentage
+### API Testing
+- `testing/test-rate-limiting.py` - Test API rate limits
+- `testing/test-graveyard-resurrection.py` - Test graveyard feature
+- `testing/test-get-meeting-lambda.py` - Test meeting retrieval
+- `testing/test-update-action-lambda.py` - Test action updates
 
-### `test-lambda-direct.py`
-Tests the check-duplicate Lambda function directly.
+### Integration Testing
+- `testing/features/` - Feature-specific test scripts
+- `testing/core/` - Core functionality tests
 
-**Usage:**
-```bash
-python scripts/test-lambda-direct.py
+## 🔧 Utility Scripts
+
+### Meeting Management
+- `trigger-processing.py` - Manually trigger meeting processing
+- `check-meeting-status.py` - Check meeting processing status
+- `regenerate-autopsies-rulebased.py` - Regenerate meeting autopsies
+
+### Data Management
+- `fix-duplicate-action-ids.py` - Fix duplicate action IDs (one-time migration)
+- `data/seed-v1-historical.py` - Seed historical data
+
+### Monitoring
+- `check-aws-credits.py` - Check AWS credit balance
+- `check-user-logs.py` - View user activity logs
+- `check-graveyard-data.py` - Inspect graveyard items
+
+### Debugging
+- `diagnose-403-error.py` - Debug 403 authorization errors
+- `test-cors-fix.sh` - Test CORS configuration
+- `verify-kanban-fix.py` - Verify Kanban drag-and-drop fix
+- `verify-resurrection.py` - Verify graveyard resurrection
+
+## 📁 Directory Structure
+
+```
+scripts/
+├── deploy-all.{sh|ps1}           # Deploy everything
+├── deploy-backend.{sh|ps1}       # Deploy backend
+├── deploy-frontend.{sh|ps1}      # Deploy frontend
+├── data/                         # Data management scripts
+├── deploy/                       # Legacy deploy scripts
+├── setup/                        # Setup and configuration
+└── testing/                      # Test scripts
+    ├── features/                 # Feature tests
+    └── core/                     # Core tests
 ```
 
-**What it tests:**
-- Lambda invocation with test task
-- Duplicate detection accuracy
-- Similarity score calculation
-- Chronic blocker identification
-
-### `test-duplicate-detection.py`
-Comprehensive test suite for duplicate detection feature.
-
-**Usage:**
-```bash
-python scripts/test-duplicate-detection.py
-```
-
-**What it tests:**
-- Lambda function exists
-- API Gateway endpoint
-- DynamoDB data and embeddings
-- Frontend build
-- S3 deployment
-- CloudFront configuration
-
-### `test-api-endpoint.py`
-Tests the API endpoint via API Gateway (simulates browser request).
-
-**Usage:**
-```bash
-# Update TEST_EMAIL and TEST_PASSWORD first
-python scripts/test-api-endpoint.py
-```
-
-**What it tests:**
-- Cognito authentication
-- API Gateway routing
-- Full request/response flow
-- End-to-end duplicate detection
-
-## Configuration
+## 🔐 Configuration
 
 All scripts use these AWS resources:
-- **Region**: `ap-south-1`
-- **Stack**: `meetingmind-stack`
-- **Table**: `meetingmind-meetings`
-- **User Pool**: `ap-south-1_mkFJawjMp`
-- **API URL**: `https://25g9jf8sqa.execute-api.ap-south-1.amazonaws.com/prod`
+- **Stack:** meetingmind-stack
+- **Region:** ap-south-1
+- **S3 Frontend:** meetingmind-frontend-707411439284
+- **CloudFront:** E3CAAI97MXY83V
+- **API:** https://25g9jf8sqa.execute-api.ap-south-1.amazonaws.com/prod
 
-## Requirements
+## 📝 Usage Examples
 
+### Deploy after code changes
 ```bash
-pip install boto3 requests
+# Backend code changed
+.\deploy-backend.ps1
+
+# Frontend code changed
+.\deploy-frontend.ps1
+
+# Both changed
+.\deploy-all.ps1
 ```
+
+### Test API rate limiting
+```bash
+python testing/test-rate-limiting.py
+```
+
+### Check meeting processing
+```bash
+python check-meeting-status.py <meeting-id>
+```
+
+### Manually process a meeting
+```bash
+python trigger-processing.py <meeting-id>
+```
+
+## ⚠️ Important Notes
+
+1. **Deployment scripts** require AWS CLI configured with proper credentials
+2. **Test scripts** may require authentication tokens (see script comments)
+3. **Data scripts** should be run carefully in production
+4. **One-time scripts** (like fix-duplicate-action-ids.py) should only be run once
+
+## 🆘 Troubleshooting
+
+### Script fails with "command not found"
+- Ensure AWS CLI is installed: `aws --version`
+- Ensure SAM CLI is installed: `sam --version`
+- Ensure Node.js is installed: `node --version`
+
+### Permission denied on Linux/Mac
+```bash
+chmod +x deploy-*.sh
+```
+
+### PowerShell execution policy error
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+
+## 📚 More Information
+
+See [DEPLOYMENT.md](../DEPLOYMENT.md) for detailed deployment guide.
