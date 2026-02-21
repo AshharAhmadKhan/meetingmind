@@ -40,6 +40,8 @@ JWT tokens stored in localStorage can be stolen via XSS. One malicious script = 
 **Severity:** HIGH  
 **File:** `backend/template.yaml` line 142
 
+**Status:** ✅ FIXED (2026-02-21)
+
 **Issue:**
 ```yaml
 Cors:
@@ -52,8 +54,13 @@ Cors:
   AllowOrigin: "'https://dcfx593ywvy92.cloudfront.net'"
 ```
 
+**What was done:**
+- Changed AllowOrigin from wildcard to specific CloudFront domain
+- Added Gateway Responses for DEFAULT_4XX and DEFAULT_5XX to ensure CORS headers on errors
+- Deployed to production
+
 **Effort:** 5 minutes  
-**Files:** `backend/template.yaml`
+**Files:** `backend/template.yaml` (FIXED)
 
 **Note:** Lambda functions already have correct CORS (CloudFront domain only). Template needs update.
 

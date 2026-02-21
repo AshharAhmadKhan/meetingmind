@@ -3,10 +3,6 @@ import boto3
 import os
 from datetime import datetime, timezone
 from decimal import Decimal
-import sys
-
-# Add parent directory to path for shared constants
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from constants import VALID_ACTION_STATUSES
 
 dynamodb   = boto3.resource('dynamodb')

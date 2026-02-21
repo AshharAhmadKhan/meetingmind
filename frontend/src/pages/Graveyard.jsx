@@ -43,12 +43,23 @@ export default function Graveyard() {
       const data = await getAllActions(null, null, selectedTeamId)
       const actions = data.actions || []
       
+      console.log('Fetched actions:', actions.length)
+      
       // Filter: >30 days old and incomplete
       const graveyard = actions.filter(a => {
         if (a.completed) return false
         const daysOld = getDaysOld(a.createdAt)
         return daysOld > 30
       })
+      
+      console.log('Graveyard items:', graveyard.length)
+      if (graveyard.length > 0) {
+        console.log('First graveyard item:', {
+          id: graveyard[0].id,
+          meetingId: graveyard[0].meetingId,
+          task: graveyard[0].task
+        })
+      }
       
       // Sort by age (oldest first)
       graveyard.sort((a, b) => {
@@ -59,6 +70,7 @@ export default function Graveyard() {
       
       setBuried(graveyard)
     } catch (e) {
+      console.error('Failed to load graveyard:', e)
       setError('Failed to load graveyard')
     } finally {
       setLoading(false)
@@ -66,6 +78,12 @@ export default function Graveyard() {
   }
 
   function openResurrectModal(action) {
+    console.log('Opening modal for action:', {
+      id: action.id,
+      meetingId: action.meetingId,
+      task: action.task,
+      fullAction: action
+    })
     setResurrectModal(action)
     setNewOwner(action.owner || '')
     // Set deadline to 7 days from now
@@ -77,6 +95,15 @@ export default function Graveyard() {
   async function resurrect() {
     if (!resurrectModal) return
     setResurrecting(true)
+    setError('') // Clear previous errors
+    
+    // Debug logging
+    console.log('Resurrecting action:', {
+      meetingId: resurrectModal.meetingId,
+      actionId: resurrectModal.id,
+      owner: newOwner,
+      deadline: newDeadline
+    })
     
     try {
       // Resurrect: move to 'todo' status with new owner and deadline
@@ -89,11 +116,30 @@ export default function Graveyard() {
       
       // Remove from graveyard
       setBuried(buried.filter(a => a.id !== resurrectModal.id))
+      
+      // Show success message
+      setError('') // Clear any errors
+      alert('✅ Action resurrected successfully! It will appear in your Kanban board.')
+      
       setResurrectModal(null)
       setNewOwner('')
       setNewDeadline('')
     } catch (e) {
-      setError('Failed to resurrect action')
+      console.error('Resurrection error:', e)
+      console.error('Error response:', e.response)
+      
+      // Show specific error messages
+      if (e.message && e.message.includes('401')) {
+        setError('Your session expired. Please logout and login again.')
+      } else if (e.message && e.message.includes('403')) {
+        setError('Not authorized to update this action.')
+      } else if (e.message && e.message.includes('404')) {
+        setError('Action item not found.')
+      } else if (e.message && e.message.includes('Network')) {
+        setError('Connection lost. Check your internet and try again.')
+      } else {
+        setError(`Failed to resurrect action: ${e.message || 'Unknown error'}`)
+      }
     } finally {
       setResurrecting(false)
     }
