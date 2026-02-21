@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { logout, checkSession, getUser } from '../utils/auth.js'
 import { getAllActions, checkDuplicate, updateAction } from '../utils/api.js'
@@ -95,7 +95,7 @@ export default function ActionsOverview() {
     }
   }
 
-  async function handleStatusChange(meetingId, actionId, newStatus) {
+  const handleStatusChange = useCallback(async (meetingId, actionId, newStatus) => {
     try {
       // Optimistic update
       setActions(prev => prev.map(a => 
@@ -116,7 +116,7 @@ export default function ActionsOverview() {
       // Revert on error by refreshing
       await fetchActions()
     }
-  }
+  }, []) // Memoized to prevent handleDragEnd recreation
 
   // Get unique owners for filter
   const owners = [...new Set(actions.map(a => a.owner).filter(Boolean))]
@@ -338,6 +338,7 @@ export default function ActionsOverview() {
         ) : view === 'kanban' ? (
           <KanbanBoard 
             actions={filteredActions}
+            allActions={actions}
             onStatusChange={handleStatusChange}
           />
         ) : (
