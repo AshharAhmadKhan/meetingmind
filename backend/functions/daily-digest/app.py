@@ -150,119 +150,350 @@ def calculate_digest(meetings):
 
 
 def send_digest_email(to_email, digest_data):
-    """Send HTML email digest"""
+    """Send HTML email digest with professional Gmail-style formatting"""
     
-    subject = f"🔔 MeetingMind Daily Digest — {digest_data['total_incomplete']} items need attention"
+    subject = f"Daily Action Items Summary — {digest_data['total_incomplete']} items need attention"
     
-    # Build HTML email
+    # Build professional HTML email (matching other templates)
     html_body = f"""
     <!DOCTYPE html>
     <html>
     <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
         <style>
-            body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; margin: 0; padding: 20px; }}
-            .container {{ max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }}
-            .header {{ background: #0c0c09; color: #c8f04a; padding: 24px; text-align: center; }}
-            .header h1 {{ margin: 0; font-size: 24px; }}
-            .stats {{ background: #f9f9f9; padding: 20px; border-bottom: 1px solid #e0e0e0; }}
-            .stat-row {{ display: flex; justify-content: space-around; }}
-            .stat {{ text-align: center; }}
-            .stat-num {{ font-size: 32px; font-weight: bold; color: #333; }}
-            .stat-label {{ font-size: 12px; color: #666; text-transform: uppercase; }}
-            .section {{ padding: 20px; }}
-            .section-title {{ font-size: 16px; font-weight: bold; margin-bottom: 12px; color: #333; }}
-            .action-item {{ background: #f9f9f9; padding: 12px; margin-bottom: 8px; border-radius: 4px; border-left: 4px solid #ccc; }}
-            .action-item.critical {{ border-left-color: #e87a6a; }}
-            .action-item.overdue {{ border-left-color: #e87a6a; }}
-            .action-item.upcoming {{ border-left-color: #e8c06a; }}
-            .action-task {{ font-size: 14px; color: #333; margin-bottom: 4px; }}
-            .action-meta {{ font-size: 12px; color: #666; }}
-            .footer {{ background: #f9f9f9; padding: 20px; text-align: center; font-size: 12px; color: #666; }}
-            .btn {{ display: inline-block; background: #c8f04a; color: #0c0c09; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; margin-top: 12px; }}
+            body {{ 
+                font-family: 'DM Mono', 'Courier New', monospace; 
+                background-color: #0c0c09; 
+                margin: 0; 
+                padding: 0; 
+                -webkit-font-smoothing: antialiased;
+            }}
+            .email-container {{ 
+                max-width: 600px; 
+                margin: 0 auto; 
+                background-color: #0c0c09;
+            }}
+            .email-wrapper {{ 
+                background-color: #141410; 
+                border: 2px solid #2a2a20;
+                border-radius: 8px;
+                overflow: hidden;
+                margin: 40px 20px;
+            }}
+            .header {{ 
+                background: linear-gradient(135deg, #0f0f0c 0%, #141410 100%);
+                padding: 32px 40px;
+                border-bottom: 2px solid #c8f04a;
+                position: relative;
+            }}
+            .header::after {{
+                content: '';
+                position: absolute;
+                bottom: -2px;
+                left: 0;
+                width: 100%;
+                height: 2px;
+                background: linear-gradient(90deg, #c8f04a 0%, transparent 100%);
+            }}
+            .logo-container {{
+                display: flex;
+                align-items: baseline;
+                gap: 2px;
+            }}
+            .logo-meeting {{ 
+                font-family: 'Playfair Display', serif;
+                color: #c8f04a; 
+                font-size: 28px; 
+                font-weight: 900; 
+                margin: 0;
+                letter-spacing: -0.5px;
+            }}
+            .logo-mind {{
+                font-family: 'Playfair Display', serif;
+                color: #f0ece0;
+                font-size: 24px;
+                font-weight: 700;
+                letter-spacing: -0.3px;
+            }}
+            .header-subtitle {{
+                color: #8a8a74;
+                font-size: 10px;
+                letter-spacing: 0.15em;
+                text-transform: uppercase;
+                margin-top: 8px;
+            }}
+            .content {{ 
+                padding: 40px; 
+                background-color: #141410;
+            }}
+            .greeting {{ 
+                color: #f0ece0; 
+                font-size: 14px; 
+                font-weight: 400; 
+                margin: 0 0 24px 0;
+                line-height: 1.6;
+                letter-spacing: 0.02em;
+            }}
+            .stats-grid {{
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 16px;
+                margin: 24px 0;
+            }}
+            .stat-card {{
+                background-color: #0f0f0c;
+                border: 1px solid #2a2a20;
+                border-radius: 6px;
+                padding: 20px;
+                text-align: center;
+            }}
+            .stat-number {{
+                font-family: 'Playfair Display', serif;
+                font-size: 32px;
+                font-weight: 700;
+                color: #c8f04a;
+                margin: 0 0 8px 0;
+            }}
+            .stat-label {{
+                color: #6b7260;
+                font-size: 10px;
+                letter-spacing: 0.1em;
+                text-transform: uppercase;
+            }}
+            .section-label {{ 
+                color: #8a8a74; 
+                font-size: 9px; 
+                font-weight: 500;
+                letter-spacing: 0.15em;
+                text-transform: uppercase;
+                margin: 32px 0 16px 0;
+            }}
+            .action-list {{
+                background-color: #0f0f0c;
+                border: 1px solid #2a2a20;
+                border-radius: 6px;
+                padding: 16px;
+                margin: 16px 0;
+            }}
+            .action-item {{
+                padding: 16px;
+                border-bottom: 1px solid #1a1a14;
+            }}
+            .action-item:last-child {{
+                border-bottom: none;
+            }}
+            .action-item.critical {{
+                border-left: 3px solid #e87a6a;
+                padding-left: 13px;
+            }}
+            .action-item.overdue {{
+                border-left: 3px solid #d93025;
+                padding-left: 13px;
+            }}
+            .action-item.upcoming {{
+                border-left: 3px solid #e8c06a;
+                padding-left: 13px;
+            }}
+            .action-task {{
+                color: #f0ece0;
+                font-size: 13px;
+                line-height: 1.6;
+                margin: 0 0 8px 0;
+            }}
+            .action-meta {{
+                color: #6b7260;
+                font-size: 11px;
+                line-height: 1.4;
+            }}
+            .meta-row {{
+                display: flex;
+                gap: 16px;
+                flex-wrap: wrap;
+            }}
+            .meta-item {{
+                display: flex;
+                align-items: center;
+                gap: 4px;
+            }}
+            .cta-section {{
+                text-align: center;
+                margin: 32px 0;
+            }}
+            .cta-button {{
+                display: inline-block;
+                background-color: #c8f04a;
+                color: #0c0c09;
+                padding: 14px 28px;
+                text-decoration: none;
+                border-radius: 4px;
+                font-size: 11px;
+                font-weight: 500;
+                letter-spacing: 0.1em;
+                text-transform: uppercase;
+            }}
+            .divider {{
+                height: 1px;
+                background: linear-gradient(90deg, transparent 0%, #2a2a20 50%, transparent 100%);
+                margin: 32px 0;
+            }}
+            .footer {{ 
+                background-color: #0f0f0c; 
+                padding: 28px 40px;
+                border-top: 1px solid #2a2a20;
+                text-align: center;
+            }}
+            .footer-brand {{ 
+                color: #f0ece0; 
+                font-size: 13px; 
+                font-weight: 500;
+                margin: 0 0 8px 0;
+                letter-spacing: 0.05em;
+            }}
+            .footer-tagline {{
+                color: #6b7260;
+                font-size: 10px;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+                margin: 0 0 16px 0;
+            }}
+            .footer-meta {{ 
+                color: #555548; 
+                font-size: 10px; 
+                line-height: 1.6;
+                margin: 4px 0;
+                letter-spacing: 0.03em;
+            }}
+            .accent-dot {{
+                display: inline-block;
+                width: 4px;
+                height: 4px;
+                background-color: #c8f04a;
+                border-radius: 50%;
+                margin: 0 8px;
+                vertical-align: middle;
+            }}
         </style>
     </head>
     <body>
-        <div class="container">
-            <div class="header">
-                <h1>🔔 Your Daily Digest</h1>
-                <p style="margin: 8px 0 0 0; opacity: 0.9;">MeetingMind</p>
-            </div>
-            
-            <div class="stats">
-                <div class="stat-row">
-                    <div class="stat">
-                        <div class="stat-num">{digest_data['completion_rate']}%</div>
-                        <div class="stat-label">Completion Rate</div>
+        <div class="email-container">
+            <div class="email-wrapper">
+                <div class="header">
+                    <div class="logo-container">
+                        <span class="logo-meeting">Meeting</span>
+                        <span class="logo-mind">Mind</span>
                     </div>
-                    <div class="stat">
-                        <div class="stat-num">{digest_data['completed_actions']}</div>
-                        <div class="stat-label">Completed</div>
-                    </div>
-                    <div class="stat">
-                        <div class="stat-num">{digest_data['total_incomplete']}</div>
-                        <div class="stat-label">Pending</div>
-                    </div>
+                    <div class="header-subtitle">Daily Action Items Summary</div>
                 </div>
-            </div>
+                
+                <div class="content">
+                    <p class="greeting">Good morning,</p>
+                    <p class="greeting">Here is your daily summary of pending action items and upcoming deadlines.</p>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-number">{digest_data['completion_rate']}%</div>
+                            <div class="stat-label">Completion</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number">{digest_data['completed_actions']}</div>
+                            <div class="stat-label">Completed</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number">{digest_data['total_incomplete']}</div>
+                            <div class="stat-label">Pending</div>
+                        </div>
+                    </div>
     """
     
     # Critical items
     if digest_data['critical']:
         html_body += f"""
-            <div class="section">
-                <div class="section-title">🔴 CRITICAL — Due Today/Tomorrow ({len(digest_data['critical'])})</div>
+                    <div class="section-label">Critical — Due Today or Tomorrow</div>
+                    <div class="action-list">
         """
         for action in digest_data['critical'][:5]:  # Limit to 5
             html_body += f"""
-                <div class="action-item critical">
-                    <div class="action-task">{action['task']}</div>
-                    <div class="action-meta">
-                        👤 {action['owner']} • 📅 {action['deadline']} • 📋 {action['meetingTitle']}
-                    </div>
-                </div>
+                        <div class="action-item critical">
+                            <div class="action-task">{action['task']}</div>
+                            <div class="action-meta">
+                                <div class="meta-row">
+                                    <div class="meta-item">Owner: {action['owner']}</div>
+                                    <div class="meta-item">Due: {action['deadline']}</div>
+                                    <div class="meta-item">Meeting: {action['meetingTitle']}</div>
+                                </div>
+                            </div>
+                        </div>
             """
-        html_body += "</div>"
+        html_body += """
+                    </div>
+        """
     
     # Overdue items
     if digest_data['overdue']:
         html_body += f"""
-            <div class="section">
-                <div class="section-title">🔴 OVERDUE — Past Deadline ({len(digest_data['overdue'])})</div>
+                    <div class="section-label">Overdue — Past Deadline</div>
+                    <div class="action-list">
         """
         for action in digest_data['overdue'][:5]:  # Limit to 5
             html_body += f"""
-                <div class="action-item overdue">
-                    <div class="action-task">{action['task']}</div>
-                    <div class="action-meta">
-                        👤 {action['owner']} • 📅 {action['deadline']} • 📋 {action['meetingTitle']}
-                    </div>
-                </div>
+                        <div class="action-item overdue">
+                            <div class="action-task">{action['task']}</div>
+                            <div class="action-meta">
+                                <div class="meta-row">
+                                    <div class="meta-item">Owner: {action['owner']}</div>
+                                    <div class="meta-item">Due: {action['deadline']}</div>
+                                    <div class="meta-item">Meeting: {action['meetingTitle']}</div>
+                                </div>
+                            </div>
+                        </div>
             """
-        html_body += "</div>"
+        html_body += """
+                    </div>
+        """
     
     # Upcoming items
     if digest_data['upcoming']:
         html_body += f"""
-            <div class="section">
-                <div class="section-title">🟡 UPCOMING — Due This Week ({len(digest_data['upcoming'])})</div>
+                    <div class="section-label">Upcoming — Due This Week</div>
+                    <div class="action-list">
         """
         for action in digest_data['upcoming'][:5]:  # Limit to 5
             html_body += f"""
-                <div class="action-item upcoming">
-                    <div class="action-task">{action['task']}</div>
-                    <div class="action-meta">
-                        👤 {action['owner']} • 📅 {action['deadline']} • 📋 {action['meetingTitle']}
-                    </div>
-                </div>
+                        <div class="action-item upcoming">
+                            <div class="action-task">{action['task']}</div>
+                            <div class="action-meta">
+                                <div class="meta-row">
+                                    <div class="meta-item">Owner: {action['owner']}</div>
+                                    <div class="meta-item">Due: {action['deadline']}</div>
+                                    <div class="meta-item">Meeting: {action['meetingTitle']}</div>
+                                </div>
+                            </div>
+                        </div>
             """
-        html_body += "</div>"
+        html_body += """
+                    </div>
+        """
     
     html_body += f"""
-            <div class="footer">
-                <a href="{FRONTEND_URL}" class="btn">View All Actions →</a>
-                <p style="margin-top: 16px;">
-                    You're receiving this because you have incomplete action items in MeetingMind.
-                </p>
+                    <div class="cta-section">
+                        <a href="{FRONTEND_URL}" class="cta-button">View All Actions</a>
+                    </div>
+                    
+                    <div class="divider"></div>
+                    
+                    <p style="color: #6b7260; font-size: 11px; line-height: 1.6; margin: 0; text-align: center;">
+                        Automated daily summary from MeetingMind<span class="accent-dot"></span>Sent at 9:00 AM IST
+                    </p>
+                </div>
+                
+                <div class="footer">
+                    <p class="footer-brand">MeetingMind</p>
+                    <p class="footer-tagline">Transform Meetings Into Action</p>
+                    <p class="footer-meta">Powered by AWS<span class="accent-dot"></span>Region: ap-south-1</p>
+                    <p class="footer-meta" style="margin-top: 12px;">© 2026 MeetingMind. All rights reserved.</p>
+                </div>
             </div>
         </div>
     </body>

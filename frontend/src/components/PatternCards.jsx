@@ -40,8 +40,8 @@ function classifyMeeting(title) {
   return 'other'
 }
 
-// Filter to last 30 days
-function filterRecent(items, dateField = 'createdAt', days = 30) {
+// Filter to last 120 days (increased to capture full demo story from Nov 2025)
+function filterRecent(items, dateField = 'createdAt', days = 120) {
   const cutoff = new Date()
   cutoff.setDate(cutoff.getDate() - days)
   cutoff.setHours(0, 0, 0, 0)
@@ -66,15 +66,27 @@ function detectPatterns(meetings, actions) {
   const MIN_MEETINGS = 5
   const MIN_ACTIONS = 10
   
-  // Filter to last 30 days
+  // Filter to last 120 days
   const recentMeetings = filterRecent(meetings)
-  const recentActions = filterRecent(actions)
+  // For actions, use meetingDate instead of createdAt (actions inherit meeting date)
+  const recentActions = filterRecent(actions, 'meetingDate')
+  
+  console.log('📊 Pattern Detection Filter Results:')
+  console.log('  Recent meetings (120 days):', recentMeetings.length, '/', meetings.length)
+  console.log('  Recent actions (120 days):', recentActions.length, '/', actions.length)
+  console.log('  MIN_MEETINGS:', MIN_MEETINGS)
+  console.log('  MIN_ACTIONS:', MIN_ACTIONS)
   
   if (recentMeetings.length < MIN_MEETINGS || recentActions.length < MIN_ACTIONS) {
+    console.log('❌ Not enough data for pattern detection')
+    console.log('  Need:', MIN_MEETINGS, 'meetings and', MIN_ACTIONS, 'actions')
+    console.log('  Have:', recentMeetings.length, 'meetings and', recentActions.length, 'actions')
     return [] // Not enough data for meaningful analysis
   }
   
-  const sampleSize = `Based on ${recentMeetings.length} meetings and ${recentActions.length} actions in last 30 days`
+  console.log('✅ Enough data - proceeding with pattern detection')
+  
+  const sampleSize = `Based on ${recentMeetings.length} meetings and ${recentActions.length} actions in last 120 days`
   
   // Pattern 1: Planning Paralysis (statistically validated)
   const planningMeetings = recentMeetings.filter(m => classifyMeeting(m.title) === 'planning')
@@ -319,10 +331,25 @@ export default function PatternCards({ meetings }) {
       abortControllerRef.current = new AbortController()
       const data = await getAllActions()
       const actions = data.actions || []
+      
+      // DEBUG: Log pattern detection inputs
+      console.log('🔍 Pattern Detection Debug:')
+      console.log('  Meetings passed:', meetings.length)
+      console.log('  Actions fetched:', actions.length)
+      console.log('  Sample meeting:', meetings[0])
+      console.log('  Sample action:', actions[0])
+      
       const detected = detectPatterns(meetings, actions)
+      
+      console.log('  Patterns detected:', detected.length)
+      if (detected.length > 0) {
+        console.log('  Pattern IDs:', detected.map(p => p.id))
+      }
+      
       setPatterns(detected)
     } catch (e) {
       if (e.name !== 'AbortError') {
+        console.error('Pattern detection error:', e)
         setError('Failed to detect patterns')
       }
     } finally {
