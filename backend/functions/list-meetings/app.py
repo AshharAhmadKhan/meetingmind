@@ -149,10 +149,12 @@ def lambda_handler(event, context):
     # Calculate health score and ghost status for each meeting
     for meeting in meetings:
         if meeting.get('status') == 'DONE':
-            health = calculate_health_score(meeting)
-            meeting['healthScore'] = health['score']
-            meeting['healthGrade'] = health['grade']
-            meeting['healthLabel'] = health['label']
+            # Only calculate health if not already stored in database
+            if 'healthGrade' not in meeting or 'healthScore' not in meeting:
+                health = calculate_health_score(meeting)
+                meeting['healthScore'] = health['score']
+                meeting['healthGrade'] = health['grade']
+                meeting['healthLabel'] = health['label']
             
             # Check if ghost meeting (zero decisions AND zero actions)
             decisions = meeting.get('decisions', [])

@@ -10,7 +10,7 @@
 [![Serverless](https://img.shields.io/badge/Architecture-Serverless-FD5750?logo=serverless&logoColor=white)](https://aws.amazon.com/serverless/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-**[Live Demo](https://dcfx593ywvy92.cloudfront.net)** • **[Documentation](docs/)** • **[Architecture](docs/ARCHITECTURE.md)** • **[API Reference](docs/API.md)**
+**[Live Demo](https://dcfx593ywvy92.cloudfront.net)** • **[Demo Video](https://www.youtube.com/watch?v=AH7-1JtyZIk)** • **[AWS Article](https://builder.aws.com/content/3A2donG56UEkNpzuma7fRqX0LpT/aideas-meetingmind)** • **[Documentation](docs/)** • **[Architecture](docs/ARCHITECTURE.md)**
 
 *Built for AWS AIdeas Competition 2026*
 
@@ -400,20 +400,20 @@ Please read [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
 
 ## 📈 Project Status
 
-**Production Readiness:** 100/100  
+**Production Status:** ✅ LIVE  
+**Competition:** AWS AIdeas 2026 - Submitted  
 **Feature Completeness:** All 11 core features functional  
 **Test Coverage:** 36 automated tests passing  
-**Repository Organization:** Professional GSoC-ready structure  
-**Last Updated:** February 22, 2026
+**Last Updated:** February 23, 2026
 
 ### Recent Milestones
 
-- ✅ Repository reorganization (56% cleaner root directory)
-- ✅ Comprehensive architecture diagrams added
-- ✅ All documentation updated and organized
-- ✅ Testing unified under tests/ directory
-- ✅ Scripts organized by category
-- ✅ Zero duplicates across codebase
+- ✅ AWS AIdeas Competition submission complete
+- ✅ Demo video published on YouTube
+- ✅ AWS Builder article published
+- ✅ Production deployment live and stable
+- ✅ Demo account configured with transformation story
+- ✅ Repository cleaned and organized
 
 ---
 
@@ -423,8 +423,10 @@ Please read [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
 Computer Science Student • AWS Enthusiast • Full-Stack Developer
 
 - 📧 Email: itzashhar@gmail.com
-- 🔗 LinkedIn: [linkedin.com/in/ashhar-ahmad-khan](https://www.linkedin.com/in/ashhar-ahmad-khan/)
+- 🔗 LinkedIn: [linkedin.com/in/ashhar-ahmad-khan](https://www.linkedin.com/in/ashhar-ahmad-khan)
 - 💻 GitHub: [@AshharAhmadKhan](https://github.com/AshharAhmadKhan)
+- 🎥 Demo Video: [YouTube](https://www.youtube.com/watch?v=AH7-1JtyZIk)
+- 📝 AWS Article: [builder.aws.com](https://builder.aws.com/content/3A2donG56UEkNpzuma7fRqX0LpT/aideas-meetingmind)
 
 **AWS Account:** 707411439284  
 **Region:** ap-south-1 (Mumbai)

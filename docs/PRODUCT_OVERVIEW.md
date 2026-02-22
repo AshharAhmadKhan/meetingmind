@@ -1,6 +1,14 @@
 # MeetingMind - Product Overview
 
-**AI-Powered Meeting Intelligence Platform**  
+**AI-Powered Meeting Intelligence Platform**
+
+**🔗 Quick Links:**
+- Live Demo: https://dcfx593ywvy92.cloudfront.net
+- YouTube Video: https://www.youtube.com/watch?v=AH7-1JtyZIk
+- AWS Article: https://builder.aws.com/content/3A2donG56UEkNpzuma7fRqX0LpT/aideas-meetingmind
+- Creator: https://www.linkedin.com/in/ashhar-ahmad-khan
+
+---  
 **Built for AWS AIdeas Competition 2026**
 
 **Last Updated:** February 22, 2026

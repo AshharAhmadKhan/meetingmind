@@ -115,7 +115,8 @@ def lambda_handler(event, context):
             
             for action in action_items:
                 # Apply status filter
-                is_complete = action.get('completed', False)
+                # Check both 'completed' (old format) and 'status' (new format)
+                is_complete = action.get('completed', False) or action.get('status') == 'DONE'
                 if status_filter == 'incomplete' and is_complete:
                     continue
                 if status_filter == 'complete' and not is_complete:
