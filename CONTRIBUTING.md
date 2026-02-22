@@ -157,7 +157,7 @@ npm test
 
 ### Integration Tests
 ```bash
-python scripts/testing/run-ci-tests.py
+python tests/integration/run-ci-tests.py
 ```
 
 ### Test Coverage
@@ -181,44 +181,9 @@ python scripts/testing/run-ci-tests.py
 - Use clear, concise language
 - Include code examples where helpful
 - Keep documentation up-to-date with code changes
+- Add "Last Updated" timestamp to all documentation files
 
-## Documentation Rules
-
-### ⚠️ CRITICAL: No Unnecessary Markdown Files
-
-**DO NOT create temporary or summary markdown files.** This clutters the repository and creates maintenance burden.
-
-### Allowed Documentation Files (Root Level)
-- `README.md` - Project overview
-- `CHANGELOG.md` - Version history
-- `ISSUES_PRIORITIZED.md` - Current issues and priorities
-- `ARCHITECTURE.md` - System architecture
-- `DEPLOYMENT.md` - Deployment guide
-- `CONTRIBUTING.md` - This file
-- `CODE_OF_CONDUCT.md` - Community guidelines
-- `LICENSE` - Legal license
-- `PRODUCT_OVERVIEW.md` - Product information
-- `CONTRIBUTORS.md` - Contributor credits
-
-### Where to Put Information Instead
-- **Completed work** → Add to `CHANGELOG.md`
-- **Current issues** → Update `ISSUES_PRIORITIZED.md`
-- **Temporary analysis** → Use comments in code or commit messages
-- **Fix summaries** → Add to `CHANGELOG.md`
-- **Future improvements** → Add to `ISSUES_PRIORITIZED.md`
-- **Deployment info** → Update `DEPLOYMENT.md`
-- **Architecture changes** → Update `ARCHITECTURE.md`
-
-### Examples of What NOT to Create
-- ❌ `KANBAN_FIX_SUMMARY.md` → Use `CHANGELOG.md`
-- ❌ `RATE_LIMITING_ANALYSIS.md` → Use `ISSUES_PRIORITIZED.md`
-- ❌ `GRAVEYARD_ANALYSIS.md` → Use `CHANGELOG.md` after fix
-- ❌ `POLISH_ISSUES.md` → Use `ISSUES_PRIORITIZED.md`
-- ❌ `PROJECT_BOOTSTRAP.md` → Historical, delete after completion
-- ❌ `scripts/README.md` → Use `DEPLOYMENT.md`
-
-### Rule of Thumb
-**If the information can fit in an existing document, put it there. If it's temporary, don't create a file for it.**
+---
 
 ## Questions or Issues?
 
@@ -226,6 +191,10 @@ python scripts/testing/run-ci-tests.py
 - Use issue templates when available
 - Provide detailed reproduction steps for bugs
 - Include relevant logs and error messages
+
+---
+
+**Last Updated:** February 22, 2026
 
 ## License
 

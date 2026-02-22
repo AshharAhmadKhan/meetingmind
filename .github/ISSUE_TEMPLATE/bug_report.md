@@ -1,13 +1,13 @@
 ---
 name: Bug Report
-about: Create a report to help us improve
+about: Report a bug to help us improve
 title: '[BUG] '
 labels: bug
 assignees: ''
 ---
 
 ## Bug Description
-<!-- A clear and concise description of what the bug is -->
+A clear and concise description of what the bug is.
 
 ## Steps to Reproduce
 1. Go to '...'
@@ -16,28 +16,22 @@ assignees: ''
 4. See error
 
 ## Expected Behavior
-<!-- A clear and concise description of what you expected to happen -->
+A clear description of what you expected to happen.
 
 ## Actual Behavior
-<!-- A clear and concise description of what actually happened -->
+What actually happened.
 
 ## Screenshots
-<!-- If applicable, add screenshots to help explain your problem -->
+If applicable, add screenshots to help explain your problem.
 
 ## Environment
-- **Browser:** [e.g. Chrome 120, Safari 17]
-- **OS:** [e.g. macOS 14, Windows 11]
-- **Device:** [e.g. Desktop, iPhone 15]
-- **MeetingMind Version:** [e.g. 1.0.10]
-
-## Console Errors
-<!-- If applicable, paste any console errors here -->
-```
-Paste console errors here
-```
+- **Browser**: [e.g. Chrome 120, Firefox 115]
+- **OS**: [e.g. Windows 11, macOS 14, Ubuntu 22.04]
+- **Device**: [e.g. Desktop, iPhone 14, Samsung Galaxy S23]
+- **Account Type**: [e.g. Free, Demo]
 
 ## Additional Context
-<!-- Add any other context about the problem here -->
+Add any other context about the problem here.
 
 ## Possible Solution
-<!-- Optional: suggest a fix or reason for the bug -->
+(Optional) Suggest a fix or reason for the bug.

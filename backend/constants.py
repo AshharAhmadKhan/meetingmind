@@ -65,3 +65,7 @@ TRANSCRIBE_MAX_RETRIES = 48  # Max polling attempts for transcription job
 TRANSCRIBE_RETRY_DELAY_SECONDS = 15  # Seconds between transcription status checks
 TRANSCRIPT_TRUNCATION_LENGTH = 5000  # Characters to store in DynamoDB
 BEDROCK_PROMPT_TRUNCATION_LENGTH = 6000  # Characters to send to Bedrock for analysis
+
+# ── DEMO MODE ──────────────────────────────────────────────
+DEMO_USER_ID = 'c1c38d2a-1081-7088-7c71-0abc19a150e9'  # Demo account user ID
+DEMO_MEETING_TTL_MINUTES = 30  # Demo meetings auto-delete after 30 minutes

@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Skeleton Loader Test</title>
+  <style>
+    body {
+      font-family: monospace;
+      background: #0c0c09;
+      color: #f0ece0;
+      padding: 20px;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 20px;
+      background: #111108;
+      border: 1px solid #2a2a20;
+      border-radius: 8px;
+    }
+    .status {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+    }
+    .success { background: #141a09; border: 1px solid #3a4a18; color: #c8f04a; }
+    .error { background: #1a0e0e; border: 1px solid #4a2a2a; color: #e87a6a; }
+    .info { background: #141410; border: 1px solid #3a3a2e; color: #8a8a74; }
+    button {
+      background: #c8f04a;
+      border: none;
+      padding: 10px 20px;
+      color: #0c0c09;
+      cursor: pointer;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 14px;
+      margin: 5px;
+    }
+    button:hover {
+      background: #d0f860;
+    }
+    .skeleton-demo {
+      background: #1a1a14;
+      border: 1px solid #3a3a2e;
+      border-radius: 6px;
+      padding: 14px 16px;
+      margin: 10px 0;
+      animation: skeletonPulse 1s ease-in-out infinite;
+    }
+    .skeleton-bar {
+      height: 14px;
+      background: #3a3a2e;
+      border-radius: 3px;
+      margin: 8px 0;
+      animation: skeletonShimmer 1s ease-in-out infinite;
+    }
+    @keyframes skeletonPulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.7; transform: scale(0.98); }
+    }
+    @keyframes skeletonShimmer {
+      0%, 100% { opacity: 0.5; }
+      50% { opacity: 0.8; }
+    }
+  </style>
+</head>
+<body>
+  <h1>🔍 Skeleton Loader Visibility Test</h1>
+  
+  <div class="test-section">
+    <h2>Test 1: Local Skeleton Demo</h2>
+    <p>This is what the skeleton loaders should look like:</p>
+    <div class="skeleton-demo">
+      <div class="skeleton-bar" style="width: 60%;"></div>
+      <div class="skeleton-bar" style="width: 40%;"></div>
+      <div class="skeleton-bar" style="width: 80%;"></div>
+    </div>
+    <div class="status info">
+      ℹ️ If you can see the animated gray bars above, your browser supports the skeleton styles.
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 2: Check Deployed Bundle</h2>
+    <button onclick="checkBundle()">Check Bundle</button>
+    <div id="bundle-result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 3: Open Demo Page</h2>
+    <p>Instructions to see skeleton loaders on the live site:</p>
+    <ol style="line-height: 1.8;">
+      <li>Click the button below to open the demo page</li>
+      <li>Immediately watch the page as it loads</li>
+      <li>You should see gray animated skeleton cards for 2 seconds</li>
+      <li>If you don't see them, try these steps:
+        <ul>
+          <li>Press Ctrl+Shift+R (Windows) or Cmd+Shift+R (Mac) for hard refresh</li>
+          <li>Open in incognito/private mode</li>
+          <li>Clear browser cache completely</li>
+        </ul>
+      </li>
+    </ol>
+    <button onclick="window.open('https://dcfx593ywvy92.cloudfront.net', '_blank')">
+      Open Demo Page
+    </button>
+    <div class="status info">
+      ℹ️ The skeletons appear ONLY during the initial 2-second loading period.
+      After data loads, they disappear and show real content.
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>What to Look For</h2>
+    <div class="status info">
+      When you refresh the demo page, you should see:
+      <ul style="margin: 10px 0; padding-left: 20px;">
+        <li>Gray animated cards with pulsing effect</li>
+        <li>Horizontal bars that shimmer</li>
+        <li>Visible for exactly 2 seconds</li>
+        <li>Then replaced with real meeting data</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    async function checkBundle() {
+      const resultDiv = document.getElementById('bundle-result');
+      resultDiv.innerHTML = '<div class="status info">⏳ Checking bundle...</div>';
+      
+      try {
+        const response = await fetch('https://dcfx593ywvy92.cloudfront.net');
+        const html = await response.text();
+        const bundleMatch = html.match(/index-([a-zA-Z0-9]+)\.js/);
+        
+        if (!bundleMatch) {
+          resultDiv.innerHTML = '<div class="status error">❌ Could not find bundle file</div>';
+          return;
+        }
+        
+        const bundleFile = bundleMatch[0];
+        const bundleResponse = await fetch(`https://dcfx593ywvy92.cloudfront.net/assets/${bundleFile}`);
+        const bundle = await bundleResponse.text();
+        
+        const checks = [
+          { name: 'Skeleton colors (#3a3a2e)', test: bundle.includes('3a3a2e') },
+          { name: '2-second delay (2000)', test: bundle.includes('2000') || bundle.includes('2e3') },
+          { name: 'Skeleton animations', test: bundle.includes('skeletonPulse') || bundle.includes('skeletonShimmer') },
+          { name: 'Loading state check', test: /loading.*\?/.test(bundle) }
+        ];
+        
+        let html = '<div class="status success">✅ Bundle found: ' + bundleFile + '</div>';
+        checks.forEach(check => {
+          const status = check.test ? 'success' : 'error';
+          const icon = check.test ? '✓' : '✗';
+          html += `<div class="status ${status}">${icon} ${check.name}</div>`;
+        });
+        
+        const allPassed = checks.every(c => c.test);
+        if (allPassed) {
+          html += '<div class="status success">🎉 All checks passed! Skeleton loaders are deployed.</div>';
+        }
+        
+        resultDiv.innerHTML = html;
+      } catch (error) {
+        resultDiv.innerHTML = '<div class="status error">❌ Error: ' + error.message + '</div>';
+      }
+    }
+  </script>
+</body>
+</html>

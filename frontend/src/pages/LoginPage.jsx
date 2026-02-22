@@ -1,20 +1,24 @@
 import React, { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { login, signup, checkSession } from '../utils/auth.js'
 
 export default function LoginPage() {
   const navigate  = useNavigate()
+  const [searchParams] = useSearchParams()
   const [email,    setEmail]    = useState('')
   const [password, setPassword] = useState('')
   const [name,     setName]     = useState('')
   const [error,    setError]    = useState('')
   const [loading,  setLoading]  = useState(false)
-  const [isSignup, setIsSignup] = useState(false)
+  const [isSignup, setIsSignup] = useState(searchParams.get('signup') === 'true')
   const [signupSuccess, setSignupSuccess] = useState(false)
 
   useEffect(() => {
-    checkSession().then(u => { if (u) navigate('/') })
-  }, [])
+    // Only redirect if user is logged in AND not trying to sign up
+    checkSession().then(u => { 
+      if (u && !isSignup) navigate('/') 
+    })
+  }, [isSignup])
 
   async function handleSubmit(e) {
     e.preventDefault()

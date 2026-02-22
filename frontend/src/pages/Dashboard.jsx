@@ -5,6 +5,7 @@ import { listMeetings, getUploadUrl, uploadAudioToS3 } from '../utils/api.js'
 import Leaderboard from '../components/Leaderboard.jsx'
 import PatternCards from '../components/PatternCards.jsx'
 import TeamSelector from '../components/TeamSelector.jsx'
+import DemoWarningBanner from '../components/DemoWarningBanner.jsx'
 import { MeetingCardSkeleton } from '../components/SkeletonLoader.jsx'
 
 const STATUS = {
@@ -81,6 +82,7 @@ export default function Dashboard() {
   const navigate = useNavigate()
   const fileRef  = useRef()
   const [user,      setUser]      = useState('')
+  const [userEmail, setUserEmail] = useState('')
   const [meetings,  setMeetings]  = useState([])
   const [loading,   setLoading]   = useState(true)
   const [uploading, setUploading] = useState(false)
@@ -138,10 +140,33 @@ export default function Dashboard() {
   useEffect(() => {
     let mounted = true
     
-    checkSession().then(u => {
+    checkSession().then(async u => {
       if (!mounted) return
       if (!u) { navigate('/login'); return }
       setUser(getUser() || '')
+      
+      // Get user email for demo detection - try multiple methods
+      try {
+        // Method 1: Try fetchUserAttributes
+        const { fetchUserAttributes } = await import('aws-amplify/auth')
+        const attributes = await fetchUserAttributes()
+        const email = attributes.email || ''
+        console.log('User email from attributes:', email)
+        setUserEmail(email)
+      } catch (e) {
+        console.log('fetchUserAttributes failed:', e)
+        // Method 2: Try getting from user object
+        try {
+          const { getCurrentUser } = await import('aws-amplify/auth')
+          const currentUser = await getCurrentUser()
+          const email = currentUser.signInDetails?.loginId || currentUser.username || ''
+          console.log('User email from getCurrentUser:', email)
+          setUserEmail(email)
+        } catch (e2) {
+          console.log('getCurrentUser also failed:', e2)
+        }
+      }
+      
       fetchMeetings()
     })
     
@@ -224,6 +249,9 @@ export default function Dashboard() {
               onTeamNameChange={setSelectedTeamName}
             />
           </div>
+
+          {/* Demo Warning Banner */}
+          <DemoWarningBanner userEmail={userEmail} />
 
           <div style={s.secHead}>
             <div>

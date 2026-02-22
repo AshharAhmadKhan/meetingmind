@@ -2,29 +2,35 @@
 
 Welcome to the MeetingMind documentation hub. This directory contains all technical documentation, guides, and reports.
 
+**Last Updated:** February 22, 2026
+
 ---
 
 ## 📚 Core Documentation
 
 ### 🎯 Start Here
-- **[PROJECT_BOOTSTRAP.md](PROJECT_BOOTSTRAP.md)** - Single source of truth for the entire project
-  - AWS resource IDs and configurations
-  - Deployment procedures
-  - Environment variables
-  - Lambda function inventory
-  - Data models
-
-### 🏗️ Technical Deep-Dives
 - **[ARCHITECTURE.md](ARCHITECTURE.md)** - Complete technical architecture
   - System design and data flow
-  - AWS services integration
+  - AWS services integration (14 services)
   - Security architecture
   - Scalability considerations
 
+- **[ARCHITECTURE_DIAGRAM.md](ARCHITECTURE_DIAGRAM.md)** - Visual architecture diagrams
+  - System architecture diagrams
+  - Sequence diagrams for key flows
+  - Database schema (ER diagram)
+  - Deployment architecture
+
+### 🏗️ Technical Deep-Dives
 - **[FEATURES.md](FEATURES.md)** - Feature documentation
   - Detailed feature descriptions
   - Implementation details
   - User workflows
+
+- **[API.md](API.md)** - Complete API reference
+  - All endpoints documented
+  - Request/response examples
+  - Authentication details
 
 ### 🚀 Operational Guides
 - **[DEPLOYMENT.md](DEPLOYMENT.md)** - Complete deployment guide

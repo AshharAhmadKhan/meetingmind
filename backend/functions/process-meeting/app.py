@@ -14,7 +14,8 @@ sys.path.append('/opt/python')  # Lambda layer path
 from constants import (
     AVG_ATTENDEES, AVG_HOURLY_RATE, DECISION_VALUE, ACTION_VALUE,
     FUZZY_MATCH_THRESHOLD, TRANSCRIBE_MAX_RETRIES, TRANSCRIBE_RETRY_DELAY_SECONDS,
-    TRANSCRIPT_TRUNCATION_LENGTH, BEDROCK_PROMPT_TRUNCATION_LENGTH
+    TRANSCRIPT_TRUNCATION_LENGTH, BEDROCK_PROMPT_TRUNCATION_LENGTH,
+    DEMO_USER_ID, DEMO_MEETING_TTL_MINUTES
 )
 
 # X-Ray instrumentation
@@ -144,6 +145,13 @@ def _update(table, user_id, meeting_id, status, extra=None):
     # Add createdAt only for new meetings
     if is_new:
         item['createdAt'] = now
+        
+        # Add TTL for demo user meetings (auto-delete after 30 minutes)
+        if user_id == DEMO_USER_ID:
+            ttl_timestamp = int((datetime.now(timezone.utc) + timedelta(minutes=DEMO_MEETING_TTL_MINUTES)).timestamp())
+            item['ttl'] = ttl_timestamp
+            item['isDemoMeeting'] = True
+            print(f"🕐 Demo meeting will expire at {datetime.fromtimestamp(ttl_timestamp, tz=timezone.utc).isoformat()}")
     
     # Add extra fields
     item.update(extra or {})
@@ -168,45 +176,85 @@ def _send_email_notification(email, meeting_id, title, status, summary='', actio
     
     try:
         if status == 'DONE':
-            subject = f"✅ Meeting Analysis Complete: {title}"
-            body_text = f"""Your meeting "{title}" has been processed successfully!
+            subject = f"Meeting Analysis Complete: {title}"
+            body_text = f"""Your meeting "{title}" has been processed successfully.
 
 View your analysis: {meeting_url}
 
 Summary: {summary if summary else 'Analysis complete'}
 
-Action Items: {action_count}
+Action Items Extracted: {action_count}
 
-Thank you for using MeetingMind!
+Thank you for using MeetingMind.
 
 ---
-MeetingMind - AI Meeting Intelligence Assistant
+MeetingMind - AI Meeting Intelligence Platform
 """
-            body_html = f"""<html>
-<head></head>
-<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-    <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-        <h2 style="color: #4CAF50;">✅ Meeting Analysis Complete</h2>
-        <h3 style="color: #555;">{title}</h3>
-        
-        <p>Your meeting has been processed successfully!</p>
-        
-        <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0;">
-            <p><strong>Summary:</strong></p>
-            <p>{summary if summary else 'Analysis complete'}</p>
-        </div>
-        
-        <p><strong>Action Items Extracted:</strong> {action_count}</p>
-        
-        <a href="{meeting_url}" style="display: inline-block; background-color: #4CAF50; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; margin: 20px 0;">View Full Analysis</a>
-        
-        <hr style="margin: 30px 0; border: none; border-top: 1px solid #ddd;">
-        <p style="color: #888; font-size: 12px;">MeetingMind - AI Meeting Intelligence Assistant</p>
-    </div>
+            body_html = f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 20px 0;">
+        <tr>
+            <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                    <!-- Header -->
+                    <tr>
+                        <td style="padding: 32px 40px 24px; border-bottom: 1px solid #e0e0e0;">
+                            <h1 style="margin: 0; font-size: 24px; font-weight: 600; color: #202124;">MeetingMind</h1>
+                        </td>
+                    </tr>
+                    
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding: 32px 40px;">
+                            <h2 style="margin: 0 0 16px; font-size: 20px; font-weight: 500; color: #202124;">Meeting Analysis Complete</h2>
+                            
+                            <p style="margin: 0 0 24px; font-size: 16px; line-height: 1.5; color: #5f6368;">
+                                Your meeting <strong>"{title}"</strong> has been processed successfully.
+                            </p>
+                            
+                            <div style="background-color: #f8f9fa; border-left: 4px solid #1a73e8; padding: 16px; margin: 24px 0; border-radius: 4px;">
+                                <p style="margin: 0 0 8px; font-size: 14px; font-weight: 600; color: #202124;">Summary</p>
+                                <p style="margin: 0; font-size: 14px; line-height: 1.5; color: #5f6368;">{summary if summary else 'Analysis complete'}</p>
+                            </div>
+                            
+                            <p style="margin: 0 0 24px; font-size: 14px; color: #5f6368;">
+                                <strong>Action Items Extracted:</strong> {action_count}
+                            </p>
+                            
+                            <table cellpadding="0" cellspacing="0" style="margin: 24px 0;">
+                                <tr>
+                                    <td style="background-color: #1a73e8; border-radius: 4px; padding: 12px 24px;">
+                                        <a href="{meeting_url}" style="color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 500; display: inline-block;">View Full Analysis</a>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    
+                    <!-- Footer -->
+                    <tr>
+                        <td style="padding: 24px 40px; border-top: 1px solid #e0e0e0; background-color: #f8f9fa;">
+                            <p style="margin: 0; font-size: 12px; line-height: 1.5; color: #5f6368;">
+                                This email was sent by MeetingMind. If you have any questions, please contact support.
+                            </p>
+                            <p style="margin: 8px 0 0; font-size: 12px; color: #5f6368;">
+                                © 2026 MeetingMind. All rights reserved.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
 </body>
 </html>"""
         else:  # FAILED
-            subject = f"❌ Meeting Processing Failed: {title}"
+            subject = f"Meeting Processing Failed: {title}"
             body_text = f"""Unfortunately, we couldn't process your meeting "{title}".
 
 Error: {error_message if error_message else 'Unknown error occurred'}
@@ -214,27 +262,61 @@ Error: {error_message if error_message else 'Unknown error occurred'}
 Please try uploading the audio file again. If the problem persists, contact support.
 
 ---
-MeetingMind - AI Meeting Intelligence Assistant
+MeetingMind - AI Meeting Intelligence Platform
 """
-            body_html = f"""<html>
-<head></head>
-<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-    <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-        <h2 style="color: #f44336;">❌ Meeting Processing Failed</h2>
-        <h3 style="color: #555;">{title}</h3>
-        
-        <p>Unfortunately, we couldn't process your meeting.</p>
-        
-        <div style="background-color: #ffebee; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #f44336;">
-            <p><strong>Error:</strong></p>
-            <p>{error_message if error_message else 'Unknown error occurred'}</p>
-        </div>
-        
-        <p>Please try uploading the audio file again. If the problem persists, contact support.</p>
-        
-        <hr style="margin: 30px 0; border: none; border-top: 1px solid #ddd;">
-        <p style="color: #888; font-size: 12px;">MeetingMind - AI Meeting Intelligence Assistant</p>
-    </div>
+            body_html = f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5; padding: 20px 0;">
+        <tr>
+            <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                    <!-- Header -->
+                    <tr>
+                        <td style="padding: 32px 40px 24px; border-bottom: 1px solid #e0e0e0;">
+                            <h1 style="margin: 0; font-size: 24px; font-weight: 600; color: #202124;">MeetingMind</h1>
+                        </td>
+                    </tr>
+                    
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding: 32px 40px;">
+                            <h2 style="margin: 0 0 16px; font-size: 20px; font-weight: 500; color: #d93025;">Meeting Processing Failed</h2>
+                            
+                            <p style="margin: 0 0 24px; font-size: 16px; line-height: 1.5; color: #5f6368;">
+                                Unfortunately, we couldn't process your meeting <strong>"{title}"</strong>.
+                            </p>
+                            
+                            <div style="background-color: #fce8e6; border-left: 4px solid #d93025; padding: 16px; margin: 24px 0; border-radius: 4px;">
+                                <p style="margin: 0 0 8px; font-size: 14px; font-weight: 600; color: #202124;">Error Details</p>
+                                <p style="margin: 0; font-size: 14px; line-height: 1.5; color: #5f6368;">{error_message if error_message else 'Unknown error occurred'}</p>
+                            </div>
+                            
+                            <p style="margin: 0; font-size: 14px; line-height: 1.5; color: #5f6368;">
+                                Please try uploading the audio file again. If the problem persists, contact support.
+                            </p>
+                        </td>
+                    </tr>
+                    
+                    <!-- Footer -->
+                    <tr>
+                        <td style="padding: 24px 40px; border-top: 1px solid #e0e0e0; background-color: #f8f9fa;">
+                            <p style="margin: 0; font-size: 12px; line-height: 1.5; color: #5f6368;">
+                                This email was sent by MeetingMind. If you have any questions, please contact support.
+                            </p>
+                            <p style="margin: 8px 0 0; font-size: 12px; color: #5f6368;">
+                                © 2026 MeetingMind. All rights reserved.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
 </body>
 </html>"""
         

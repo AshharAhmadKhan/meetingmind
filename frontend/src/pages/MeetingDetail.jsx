@@ -71,37 +71,103 @@ function getAgeBadge(createdAt) {
 
 function calcHealthScore(actions, decisions) {
   if (actions.length === 0 && decisions.length === 0) return 0
+  if (actions.length === 0) return 10.0 // No actions = perfect score
   
-  let score = 0
-  
-  // Decision quality (0-3 points) - more decisions = better meeting
-  const decisionPoints = Math.min(decisions.length, 3)
-  
-  // Action clarity (0-3 points) - clear ownership + deadlines
-  const clearActions = actions.filter(a => 
-    a.owner && a.owner !== 'Unassigned' && a.deadline
-  ).length
-  const clarityPoints = actions.length > 0 
-    ? (clearActions / actions.length) * 3 
-    : 0
-  
-  // Completion rate (0-2 points) - how many are done
+  const total = actions.length
   const completed = actions.filter(a => a.completed).length
-  const completionPoints = actions.length > 0
-    ? (completed / actions.length) * 2
-    : 0
+  const owned = actions.filter(a => a.owner && a.owner !== 'Unassigned').length
   
-  // Risk distribution (0-2 points) - fewer high-risk items = better
-  const highRisk = actions.filter(a => {
+  // Calculate average risk score
+  const riskScores = actions.map(a => {
     const risk = getRiskBadge(a)
-    return risk && (risk.label === 'HIGH RISK' || risk.label === 'CRITICAL')
-  }).length
-  const riskPoints = actions.length > 0
-    ? (1 - (highRisk / actions.length)) * 2
+    return risk ? risk.score : 0
+  })
+  const avgRisk = riskScores.length > 0 
+    ? riskScores.reduce((sum, r) => sum + r, 0) / riskScores.length 
     : 0
   
-  score = decisionPoints + clarityPoints + completionPoints + riskPoints
-  return Math.round(score * 10) / 10 // Round to 1 decimal
+  // Use same formula as backend (but scale to 0-10 instead of 0-100)
+  const completionRate = (completed / total) * 40
+  const ownerRate = (owned / total) * 30
+  const riskInverted = ((100 - avgRisk) / 100) * 20
+  const recencyComponent = 10 // Always give full recency points on frontend
+  
+  let score = completionRate + ownerRate + riskInverted + recencyComponent
+  score = Math.min(Math.max(score, 0), 100) // Clamp to 0-100
+  
+  // Convert to 0-10 scale
+  return Math.round((score / 10) * 10) / 10
+}
+
+function generateAutopsy(actions, decisions, healthScore) {
+  // Calculate metrics
+  const totalActions = actions.length
+  const completed = actions.filter(a => a.completed)
+  const unassigned = actions.filter(a => !a.owner || a.owner === 'Unassigned')
+  const decisionCount = decisions.length
+  
+  const completionRate = totalActions > 0 ? completed.length / totalActions : 0
+  const unassignedRate = totalActions > 0 ? unassigned.length / totalActions : 0
+  
+  // Convert 10-point scale to 100-point scale for grade comparison
+  const score100 = healthScore * 10
+  
+  // Only show autopsy for D/F grades (< 70/100 or < 7/10)
+  const isGhost = decisionCount === 0 && totalActions === 0
+  if (score100 >= 70 && !isGhost) return null
+  
+  // Rule 1: Ghost meeting
+  if (isGhost) {
+    return "Cause of death: Zero decisions and zero action items extracted from this meeting. Prescription: This meeting could have been an email—try Slack next time."
+  }
+  
+  // Rule 2: High unassigned rate (>50%)
+  if (unassignedRate > 0.5) {
+    return `Cause of death: ${unassigned.length} of ${totalActions} tasks have no owner—classic diffusion of responsibility. Prescription: No one leaves until every task has a name.`
+  }
+  
+  // Rule 3: Zero completion
+  if (totalActions > 0 && completionRate === 0) {
+    return `Cause of death: Zero of ${totalActions} action items completed despite clear assignments. Prescription: Set up accountability check-ins before the next meeting.`
+  }
+  
+  // Rule 4: Very low completion (1-25%)
+  if (completionRate > 0 && completionRate <= 0.25) {
+    return `Cause of death: Only ${completed.length} of ${totalActions} commitments delivered—poor follow-through. Prescription: Assign fewer, higher-priority tasks or reduce meeting frequency.`
+  }
+  
+  // Rule 5: Low completion (26-50%)
+  if (completionRate > 0.25 && completionRate <= 0.5) {
+    return `Cause of death: Half the commitments were abandoned (${completed.length}/${totalActions} completed). Prescription: Focus on the critical few instead of the trivial many.`
+  }
+  
+  // Rule 6: No decisions but many actions
+  if (decisionCount === 0 && totalActions > 3) {
+    return `Cause of death: ${totalActions} tasks assigned but zero decisions made—this was a status update, not a meeting. Prescription: Cancel recurring meetings that don't drive decisions.`
+  }
+  
+  // Rule 7: Many decisions, few actions
+  if (decisionCount > 3 && totalActions < 2) {
+    return `Cause of death: ${decisionCount} decisions with no clear next steps—lots of talk, little execution. Prescription: Convert decisions into concrete action items with owners.`
+  }
+  
+  // Rule 8: No decisions at all
+  if (decisionCount === 0 && totalActions > 0) {
+    return `Cause of death: ${totalActions} tasks but zero decisions—no strategic direction. Prescription: Decide what NOT to do before assigning more work.`
+  }
+  
+  // Rule 9: Some unassigned tasks (20-50%)
+  if (unassignedRate > 0.2 && unassignedRate <= 0.5) {
+    return `Cause of death: ${unassigned.length} of ${totalActions} tasks lack clear ownership. Prescription: Use the 'who does what by when' format for every commitment.`
+  }
+  
+  // Rule 10: Generic fallback for D/F grades
+  const grade = score100 >= 90 ? 'A' : score100 >= 80 ? 'B' : score100 >= 70 ? 'C' : score100 >= 60 ? 'D' : 'F'
+  if (score100 < 60) {
+    return `Cause of death: Meeting health score of ${healthScore}/10 (Grade: ${grade}) indicates critical failure. Prescription: Review meeting necessity—this might not need to happen.`
+  } else {
+    return `Cause of death: Meeting scored ${healthScore}/10 (Grade: ${grade}) with unclear action clarity. Prescription: Define specific, measurable outcomes before scheduling the next one.`
+  }
 }
 
 // Mock speaker data removed - Issue #16 fixed
@@ -358,17 +424,22 @@ export default function MeetingDetail() {
       })()}
 
       {/* AUTOPSY CARD - Only show for D/F grades or ghost meetings */}
-      {meeting.autopsy && (meeting.healthGrade === 'D' || meeting.healthGrade === 'F' || meeting.isGhost) && (
-        <div style={s.autopsySection}>
-          <div style={s.autopsyCard}>
-            <div style={s.autopsyHeader}>
-              <span style={s.autopsyIcon}>🔬</span>
-              <h3 style={s.autopsyTitle}>Meeting Autopsy</h3>
+      {(() => {
+        const dynamicAutopsy = generateAutopsy(normalizedActions, decisions, health)
+        if (!dynamicAutopsy) return null
+        
+        return (
+          <div style={s.autopsySection}>
+            <div style={s.autopsyCard}>
+              <div style={s.autopsyHeader}>
+                <span style={s.autopsyIcon}>🔬</span>
+                <h3 style={s.autopsyTitle}>Meeting Autopsy</h3>
+              </div>
+              <p style={s.autopsyText}>{dynamicAutopsy}</p>
             </div>
-            <p style={s.autopsyText}>{meeting.autopsy}</p>
           </div>
-        </div>
-      )}
+        )
+      })()}
 
       {/* CHARTS ROW - Show if there's data to display */}
       <div style={s.chartsRow}>

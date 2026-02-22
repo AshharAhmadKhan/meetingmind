@@ -1,6 +1,6 @@
 # Recording Best Practices - MeetingMind
 
-**Last Updated:** February 20, 2026  
+**Last Updated:** February 22, 2026  
 **Author:** Ashhar Ahmad Khan
 
 ---

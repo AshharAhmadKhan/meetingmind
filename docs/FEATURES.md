@@ -2,6 +2,8 @@
 
 Complete feature documentation for the MeetingMind platform.
 
+**Last Updated:** February 22, 2026
+
 ## Core Features
 
 ### 1. Meeting Upload & Processing
