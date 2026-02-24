@@ -33,6 +33,17 @@ Resources:
         - python3.11
       RetentionPolicy: Retain
 
+  # ── LAMBDA LAYER: SHARED HEALTH CALCULATOR ────────────────
+  SharedHealthLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: meetingmind-shared-health
+      Description: Shared health score calculation functions
+      ContentUri: layers/shared-health/
+      CompatibleRuntimes:
+        - python3.11
+      RetentionPolicy: Retain
+
   # ── COGNITO ────────────────────────────────────────────────
   MeetingMindUserPool:
     Type: AWS::Cognito::UserPool
@@ -239,6 +250,8 @@ Resources:
       Handler: app.lambda_handler
       Timeout: 900
       MemorySize: 512
+      Layers:
+        - !Ref SharedHealthLayer
       Environment:
         Variables:
           PROCESSING_QUEUE_URL: !Ref ProcessingQueue
@@ -415,6 +428,8 @@ Resources:
       FunctionName: meetingmind-update-action
       CodeUri: functions/update-action/
       Handler: app.lambda_handler
+      Layers:
+        - !Ref SharedHealthLayer
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref MeetingsTable

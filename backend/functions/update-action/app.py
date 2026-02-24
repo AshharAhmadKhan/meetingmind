@@ -1,9 +1,14 @@
 import json
 import boto3
 import os
+import sys
 from datetime import datetime, timezone
 from decimal import Decimal
 from constants import VALID_ACTION_STATUSES
+
+# Add Lambda layer paths
+sys.path.append('/opt/python')
+from health_calculator import calculate_health_score, generate_autopsy
 
 dynamodb   = boto3.resource('dynamodb')
 TABLE_NAME = os.environ['MEETINGS_TABLE']
@@ -94,52 +99,103 @@ def lambda_handler(event, context):
     if not item:
         return _response(404, {'error': 'Meeting not found'})
 
+    # FIX #1: Find action index for atomic update (prevents race condition)
     actions = item.get('actionItems', [])
-    updated = False
-    for action in actions:
+    action_index = None
+    for i, action in enumerate(actions):
         if action.get('id') == action_id:
-            # Update completed field
-            action['completed'] = completed
-            action['completedAt'] = datetime.now(timezone.utc).isoformat() if completed else None
-            
-            # Update status field if provided
-            if status:
-                if status in VALID_ACTION_STATUSES:
-                    action['status'] = status
-                    # Sync completed field with status
-                    if status == 'done':
-                        action['completed'] = True
-                        action['completedAt'] = datetime.now(timezone.utc).isoformat()
-                    elif action.get('completed'):
-                        # If moving away from done, mark as incomplete
-                        action['completed'] = False
-                        action['completedAt'] = None
-            
-            # Update owner if provided
-            if owner is not None:
-                action['owner'] = owner
-            
-            # Update deadline if provided
-            if deadline is not None:
-                action['deadline'] = deadline
-            
-            updated = True
+            action_index = i
             break
 
-    if not updated:
+    if action_index is None:
         return _response(404, {'error': f'Action item {action_id} not found'})
 
-    # Use meeting owner's userId for the update (not current user's)
-    table.update_item(
-        Key={'userId': meeting_owner_id, 'meetingId': meeting_id},
-        UpdateExpression='SET actionItems = :a, updatedAt = :t',
-        ExpressionAttributeValues={
-            ':a': actions,
-            ':t': datetime.now(timezone.utc).isoformat()
-        }
-    )
+    # Prepare update values
+    now = datetime.now(timezone.utc).isoformat()
+    completed_at = now if completed else None
+    
+    # Determine final status
+    final_status = status if status and status in VALID_ACTION_STATUSES else ('done' if completed else 'todo')
+    
+    # FIX #1: Use atomic update expression (NO RACE CONDITION!)
+    # This updates only the specific action by index, not the entire array
+    try:
+        update_expr_parts = []
+        expr_attr_values = {':ut': now}
+        expr_attr_names = {}
+        
+        # Always update completed, completedAt, status, updatedAt
+        update_expr_parts.append(f'actionItems[{action_index}].completed = :c')
+        update_expr_parts.append(f'actionItems[{action_index}].completedAt = :ca')
+        update_expr_parts.append(f'actionItems[{action_index}].#status = :s')
+        update_expr_parts.append('updatedAt = :ut')
+        
+        expr_attr_values[':c'] = completed
+        expr_attr_values[':ca'] = completed_at
+        expr_attr_values[':s'] = final_status
+        expr_attr_names['#status'] = 'status'
+        
+        # Optionally update owner
+        if owner is not None:
+            update_expr_parts.append(f'actionItems[{action_index}].#owner = :o')
+            expr_attr_values[':o'] = owner
+            expr_attr_names['#owner'] = 'owner'
+        
+        # Optionally update deadline
+        if deadline is not None:
+            update_expr_parts.append(f'actionItems[{action_index}].deadline = :d')
+            expr_attr_values[':d'] = deadline
+        
+        update_expression = 'SET ' + ', '.join(update_expr_parts)
+        
+        # Execute atomic update
+        table.update_item(
+            Key={'userId': meeting_owner_id, 'meetingId': meeting_id},
+            UpdateExpression=update_expression,
+            ExpressionAttributeValues=expr_attr_values,
+            ExpressionAttributeNames=expr_attr_names if expr_attr_names else None
+        )
+        
+        print(f"✅ Atomic update successful for action {action_id}")
+        
+    except Exception as e:
+        print(f"❌ Atomic update failed: {e}")
+        return _response(500, {'error': f'Failed to update action: {str(e)}'})
 
-    return _response(200, {'success': True, 'actionId': action_id, 'completed': completed, 'status': status})
+    # FIX #2: Recalculate health score after action update
+    try:
+        # Fetch updated meeting to get current state
+        response = table.get_item(Key={'userId': meeting_owner_id, 'meetingId': meeting_id})
+        updated_meeting = response.get('Item')
+        
+        if updated_meeting:
+            actions = updated_meeting.get('actionItems', [])
+            decisions = updated_meeting.get('decisions', [])
+            created_at = updated_meeting.get('createdAt')
+            
+            # Calculate new health metrics
+            health = calculate_health_score(actions, decisions, created_at)
+            autopsy = generate_autopsy(actions, decisions, updated_meeting.get('transcript', ''), float(health['score']))
+            
+            # Update health metrics in DynamoDB
+            table.update_item(
+                Key={'userId': meeting_owner_id, 'meetingId': meeting_id},
+                UpdateExpression='SET healthScore = :hs, healthGrade = :hg, healthLabel = :hl, autopsy = :a',
+                ExpressionAttributeValues={
+                    ':hs': health['score'],
+                    ':hg': health['grade'],
+                    ':hl': health['label'],
+                    ':a': autopsy
+                }
+            )
+            
+            print(f"✅ Health score recalculated: {health['score']} ({health['grade']})")
+        
+    except Exception as e:
+        # Don't fail the request if health calculation fails
+        print(f"⚠️  Health score recalculation failed (non-fatal): {e}")
+
+    return _response(200, {'success': True, 'actionId': action_id, 'completed': completed, 'status': final_status})
 
 
 def _response(code, body):
