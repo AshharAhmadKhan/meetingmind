@@ -1,0 +1,294 @@
+{
+  "timestamp": "2026-02-24T10:10:18.336858+00:00",
+  "total_tests": 31,
+  "passed": 28,
+  "failed": 3,
+  "warnings": 0,
+  "tests": [
+    {
+      "category": "extraction",
+      "name": "action_item_count",
+      "passed": false,
+      "details": {
+        "actual": 4,
+        "expected": 23,
+        "rate": "17.4%"
+      }
+    },
+    {
+      "category": "extraction",
+      "name": "action_text_population",
+      "passed": true,
+      "details": {
+        "populated": 4,
+        "empty": 0,
+        "rate": "100.0%"
+      }
+    },
+    {
+      "category": "extraction",
+      "name": "owner_assignment",
+      "passed": true,
+      "details": {
+        "assigned": 4,
+        "total": 4,
+        "rate": "100.0%"
+      }
+    },
+    {
+      "category": "extraction",
+      "name": "deadline_assignment",
+      "passed": true,
+      "details": {
+        "assigned": 4,
+        "total": 4,
+        "rate": "100.0%"
+      }
+    },
+    {
+      "category": "extraction",
+      "name": "decision_count",
+      "passed": false,
+      "details": {
+        "actual": 3,
+        "expected": 8,
+        "rate": "37.5%"
+      }
+    },
+    {
+      "category": "extraction",
+      "name": "followup_count",
+      "passed": true,
+      "details": {
+        "actual": 4,
+        "expected": 4,
+        "rate": "100.0%"
+      }
+    },
+    {
+      "category": "quality",
+      "name": "risk_score_calculation",
+      "passed": true,
+      "details": {
+        "calculated": 4,
+        "total": 4
+      }
+    },
+    {
+      "category": "quality",
+      "name": "embedding_generation",
+      "passed": true,
+      "details": {
+        "generated": 4,
+        "total": 4
+      }
+    },
+    {
+      "category": "quality",
+      "name": "action_id_assignment",
+      "passed": true,
+      "details": {
+        "assigned": 4,
+        "total": 4
+      }
+    },
+    {
+      "category": "quality",
+      "name": "transcript_capture",
+      "passed": true,
+      "details": {
+        "length": 5000,
+        "expected_min": 4000
+      }
+    },
+    {
+      "category": "quality",
+      "name": "summary_generation",
+      "passed": true,
+      "details": {
+        "length": 459,
+        "expected_min": 50
+      }
+    },
+    {
+      "category": "health",
+      "name": "health_score_calculation",
+      "passed": true,
+      "details": {
+        "score": 60.0
+      }
+    },
+    {
+      "category": "health",
+      "name": "health_grade_assignment",
+      "passed": true,
+      "details": {
+        "grade": "D"
+      }
+    },
+    {
+      "category": "health",
+      "name": "grade_accuracy",
+      "passed": false,
+      "details": {
+        "actual": "D",
+        "expected": [
+          "A",
+          "B"
+        ]
+      }
+    },
+    {
+      "category": "health",
+      "name": "roi_calculation",
+      "passed": true,
+      "details": {
+        "cost": "150",
+        "decision_count": "3",
+        "clear_action_count": "4",
+        "value": "2300",
+        "roi": "1433.3",
+        "meeting_duration_minutes": "30"
+      }
+    },
+    {
+      "category": "health",
+      "name": "autopsy_logic",
+      "passed": true,
+      "details": {
+        "has_autopsy": false,
+        "grade": "D"
+      }
+    },
+    {
+      "category": "features",
+      "name": "duplicate_detection_ready",
+      "passed": true,
+      "details": {
+        "ready": 4,
+        "total": 4
+      }
+    },
+    {
+      "category": "features",
+      "name": "graveyard_compatibility",
+      "passed": true,
+      "details": {
+        "eligible": 0,
+        "total": 4
+      }
+    },
+    {
+      "category": "features",
+      "name": "kanban_board_ready",
+      "passed": true,
+      "details": {
+        "ready": 4,
+        "total": 4
+      }
+    },
+    {
+      "category": "features",
+      "name": "email_notifications_ready",
+      "passed": true,
+      "details": {
+        "email": "ashkagakoko@gmail.com"
+      }
+    },
+    {
+      "category": "features",
+      "name": "pattern_detection_ready",
+      "passed": true,
+      "details": {
+        "complete": 4,
+        "total": 4
+      }
+    },
+    {
+      "category": "integrity",
+      "name": "no_duplicate_ids",
+      "passed": true,
+      "details": {
+        "total": 4,
+        "unique": 4
+      }
+    },
+    {
+      "category": "integrity",
+      "name": "valid_deadline_formats",
+      "passed": true,
+      "details": {
+        "invalid": []
+      }
+    },
+    {
+      "category": "integrity",
+      "name": "valid_risk_scores",
+      "passed": true,
+      "details": {
+        "invalid": []
+      }
+    },
+    {
+      "category": "integrity",
+      "name": "meeting_status",
+      "passed": true,
+      "details": {
+        "status": "DONE"
+      }
+    },
+    {
+      "category": "integrity",
+      "name": "timestamps_present",
+      "passed": true,
+      "details": {
+        "createdAt": true,
+        "updatedAt": true
+      }
+    },
+    {
+      "category": "frontend",
+      "name": "all_fields_present",
+      "passed": true,
+      "details": {
+        "complete": 4,
+        "total": 4
+      }
+    },
+    {
+      "category": "frontend",
+      "name": "task_text_displayable",
+      "passed": true,
+      "details": {
+        "displayable": 4,
+        "empty": 0
+      }
+    },
+    {
+      "category": "frontend",
+      "name": "owners_present",
+      "passed": true,
+      "details": {
+        "present": 4,
+        "missing": 0
+      }
+    },
+    {
+      "category": "frontend",
+      "name": "meeting_title_present",
+      "passed": true,
+      "details": {
+        "title": "Test"
+      }
+    },
+    {
+      "category": "frontend",
+      "name": "decisions_displayable",
+      "passed": true,
+      "details": {
+        "displayable": 3,
+        "total": 3
+      }
+    }
+  ]
+}

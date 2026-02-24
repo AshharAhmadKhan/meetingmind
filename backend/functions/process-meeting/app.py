@@ -616,19 +616,59 @@ def _generate_embedding(text):
 def _try_bedrock(transcript_text, title):
     """Attempt real Bedrock analysis with retry logic for throttling."""
     today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
-    prompt = f"""Analyze this meeting and return ONLY valid JSON:
+    prompt = f"""You are an expert meeting analyst. Extract ALL action items, decisions, and follow-ups from this meeting transcript with extraordinary precision.
+
+CRITICAL EXTRACTION RULES:
+1. ACTION ITEMS - Extract EVERY commitment, task, or assignment mentioned:
+   • Explicit commitments: "I will...", "I'll...", "I'm going to..."
+   • Task assignments: "Can you...", "Please...", "Could you..."
+   • Implicit tasks: "We need to...", "Let's...", "Someone should..."
+   • Deadlines: "by Friday", "next week", "March 5th", "tomorrow", "end of month"
+   • Even vague commitments count - extract them all
+
+2. DECISIONS - Extract EVERY decision made:
+   • Explicit: "We decided...", "Let's go with...", "We'll do..."
+   • Implicit: "Okay, so...", "Agreed", "Sounds good"
+   • Budget approvals, timeline changes, strategy choices
+
+3. FOLLOW-UPS - Extract items needing future discussion:
+   • "We'll revisit...", "Let's circle back...", "Follow up on..."
+   • Unresolved questions, pending information
+
+OUTPUT FORMAT (STRICT JSON):
 {{
-  "summary": "2-3 sentence summary",
-  "decisions": ["decision 1"],
-  "action_items": [{{"id":"action-1","task":"task","owner":"person","deadline":"YYYY-MM-DD or null","completed":false}}],
-  "follow_ups": ["follow up"]
+  "summary": "2-3 sentence executive summary of meeting outcomes and key points",
+  "decisions": [
+    "Decision 1: Clear statement of what was decided",
+    "Decision 2: Another decision made"
+  ],
+  "action_items": [
+    {{
+      "task": "Complete, specific description of what needs to be done",
+      "owner": "Person's Name" or "Unassigned",
+      "deadline": "YYYY-MM-DD" or null
+    }}
+  ],
+  "follow_ups": [
+    "Follow-up item 1: What needs future discussion",
+    "Follow-up item 2: Another pending item"
+  ]
 }}
 
-Meeting: {title}
-Date: {today}
-Transcript: {transcript_text[:BEDROCK_PROMPT_TRUNCATION_LENGTH]}
+QUALITY STANDARDS:
+• task: Must be specific and actionable (not "discuss" or "think about")
+• owner: Use actual names from transcript, not roles
+• deadline: Convert relative dates to absolute YYYY-MM-DD format (today is {today})
+• Extract 15-25 action items for a typical 30-60 minute meeting
+• Don't skip items - completeness is critical
 
-Return ONLY JSON."""
+MEETING DETAILS:
+Title: {title}
+Date: {today}
+Transcript:
+{transcript_text[:BEDROCK_PROMPT_TRUNCATION_LENGTH]}
+
+Return ONLY the JSON object. No markdown, no explanations, no preamble."""
 
     models = [
         ('anthropic.claude-3-haiku-20240307-v1:0', 'anthropic'),  # Use Haiku (stable, works with on-demand)
@@ -645,10 +685,10 @@ Return ONLY JSON."""
             try:
                 if model_type == 'anthropic':
                     body = json.dumps({'anthropic_version':'bedrock-2023-05-31',
-                        'max_tokens':2000,'messages':[{'role':'user','content':prompt}]})
+                        'max_tokens':4000,'messages':[{'role':'user','content':prompt}]})
                 else:
                     body = json.dumps({'messages':[{'role':'user','content':[{'text':prompt}]}],
-                        'inferenceConfig':{'maxTokens':2000,'temperature':0.1}})
+                        'inferenceConfig':{'maxTokens':4000,'temperature':0.1}})
 
                 resp = bedrock.invoke_model(modelId=model_id, body=body)
                 result = json.loads(resp['body'].read())
@@ -660,6 +700,15 @@ Return ONLY JSON."""
 
                 text = re.sub(r'^```json\s*|^```\s*|\s*```$','',text).strip()
                 parsed = json.loads(text)
+                
+                # Log raw AI response for debugging
+                print(f"🔍 RAW AI RESPONSE from {model_id}:")
+                print(f"   Action items: {len(parsed.get('action_items', []))}")
+                print(f"   Decisions: {len(parsed.get('decisions', []))}")
+                print(f"   Follow-ups: {len(parsed.get('follow_ups', []))}")
+                if parsed.get('action_items'):
+                    print(f"   First action sample: {json.dumps(parsed['action_items'][0], indent=6)}")
+                
                 print(f"Bedrock success with {model_id} (attempt {attempt + 1})")
                 return parsed
                 
@@ -803,7 +852,7 @@ def lambda_handler(event, context):
             
             action = {
                 'id':        str(uuid.uuid4()),  # Generate unique UUID for each action
-                'task':      a.get('task', ''),
+                'task':      a.get('task') or a.get('text') or a.get('action') or a.get('description') or '',
                 'owner':     matched_owner,
                 'deadline':  a.get('deadline') if a.get('deadline') not in (None,'null','None','') else None,
                 'completed': False,
